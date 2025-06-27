@@ -2,24 +2,30 @@
 
 ![logo](StrmAssistant/Properties/thumb.png "logo")
 
+## 博客（介绍以及更新途径） 
+> https://blog.jiawei.xin/?p=1960
+
+## 插件下载网盘
+> https://cf.mb6.top/tmp/?dir=emby/plugins/StrmAssistant_less
+
 ## 用途
 
-**能力有限，StrmAssistant_less 不支持其他功能，只支持中文搜索增强，并且随缘更新。如果需要完整功能，请使用StrmAssistant完整版。完整版指路： [StrmAssistant(Emby神医助手) ](https://github.com/sjtuross/StrmAssistant)**
+**能力有限，StrmAssistant_less 不支持其他功能，只支持中文搜索增强和代理配置，并且随缘更新。如果需要完整功能，请使用StrmAssistant pro。完整版指路： [StrmAssistant pro(Emby神医助手 pro) ]([https://github.com/sjtuross/StrmAssistant](https://github.com/sjtuross/StrmAssistant.Releases/releases/tag/v3.0.0.0))**
 
 1. 中文搜索增强
-2. ~~提高首次播放的起播速度~~
-3. ~~视频截图预览缩略图增强~~
-4. ~~片头片尾探测增强~~
-5. ~~自动合并同目录视频为多版本~~
-6. ~~独占模式提取媒体信息~~
-7. ~~独立的外挂字幕扫描~~
-8. ~~自定义刮削备选语言~~
-9. ~~使用替代`TMDB`配置~~
-10. ~~演职人员增强`TMDB`~~
-11. ~~获取原语言海报~~
-12. ~~拼音首字母排序~~
-13. ~~媒体信息持久化~~
-14. ~~支持代理服务器~~
+2. 支持代理服务器
+3. ~~提高首次播放的起播速度~~
+4. ~~视频截图预览缩略图增强~~
+5. ~~片头片尾探测增强~~
+6. ~~自动合并同目录视频为多版本~~
+7. ~~独占模式提取媒体信息~~
+8. ~~独立的外挂字幕扫描~~
+9. ~~自定义刮削备选语言~~
+10. ~~使用替代`TMDB`配置~~
+11. ~~演职人员增强`TMDB`~~
+12. ~~获取原语言海报~~
+13. ~~拼音首字母排序~~
+14. ~~媒体信息持久化~~
 15. ~~支持`TMDB`剧集组刮削~~
 
 
