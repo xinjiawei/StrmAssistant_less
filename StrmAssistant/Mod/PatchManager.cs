@@ -36,9 +36,9 @@ namespace StrmAssistant.Mod
             {
                 if (Plugin.Instance.DebugMode)
                 {
-                    Plugin.Instance.Logger.Debug("Harmony Init Failed");
-                    Plugin.Instance.Logger.Debug(e.Message);
-                    Plugin.Instance.Logger.Debug(e.StackTrace);
+                    Plugin.Instance.Logger.Info("Harmony Init Failed");
+                    Plugin.Instance.Logger.Info(e.Message);
+                    Plugin.Instance.Logger.Info(e.StackTrace);
                 }
             }
 
@@ -127,7 +127,7 @@ namespace StrmAssistant.Mod
 
                     if (Plugin.Instance.DebugMode)
                     {
-                        Plugin.Instance.Logger.Debug(
+                        Plugin.Instance.Logger.Info(
                             $"{nameof(ReversePatch)} {(targetMethod.DeclaringType != null ? targetMethod.DeclaringType.Name + "." : string.Empty)}{targetMethod.Name} for {tracker.PatchType.Name} Success");
                     }
 
@@ -137,10 +137,10 @@ namespace StrmAssistant.Mod
                 {
                     if (Plugin.Instance.DebugMode)
                     {
-                        Plugin.Instance.Logger.Debug(
+                        Plugin.Instance.Logger.Info(
                             $"{nameof(ReversePatch)} {targetMethod.Name} for {tracker.PatchType.Name} Failed");
-                        Plugin.Instance.Logger.Debug(he.Message);
-                        Plugin.Instance.Logger.Debug(he.StackTrace);
+                        Plugin.Instance.Logger.Info(he.Message);
+                        Plugin.Instance.Logger.Info(he.StackTrace);
                     }
 
                     tracker.FallbackPatchApproach = PatchApproach.Reflection;
@@ -194,7 +194,7 @@ namespace StrmAssistant.Mod
                 {
                     if (Plugin.Instance.DebugMode)
                     {
-                        Plugin.Instance.Logger.Debug(
+                        Plugin.Instance.Logger.Info(
                             $"{action} {(targetMethod.DeclaringType != null ? targetMethod.DeclaringType.Name + "." : string.Empty)}{targetMethod.Name} for {tracker.PatchType.Name} Success");
                     }
                 }
@@ -205,9 +205,9 @@ namespace StrmAssistant.Mod
             {
                 if (Plugin.Instance.DebugMode)
                 {
-                    Plugin.Instance.Logger.Debug($"{action} {targetMethod.Name} for {tracker.PatchType.Name} Failed");
-                    Plugin.Instance.Logger.Debug(he.Message);
-                    Plugin.Instance.Logger.Debug(he.StackTrace);
+                    Plugin.Instance.Logger.Info($"{action} {targetMethod.Name} for {tracker.PatchType.Name} Failed");
+                    Plugin.Instance.Logger.Info(he.Message);
+                    Plugin.Instance.Logger.Info(he.StackTrace);
                 }
 
                 tracker.FallbackPatchApproach = PatchApproach.Reflection;

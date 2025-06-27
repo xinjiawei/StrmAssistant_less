@@ -70,9 +70,9 @@ namespace StrmAssistant.Options
                         //case SearchItemType.MusicAlbum:
                         //    includeItemTypes.AddRange(new[] { nameof(MusicAlbum) });
                         //    break;
-                        //case SearchItemType.Person:
-                        //    includeItemTypes.AddRange(new[] { nameof(Person) });
-                        //    break;
+                        case SearchItemType.Person:
+                            includeItemTypes.AddRange(new[] { nameof(Person) });
+                            break;
                         //case SearchItemType.MusicArtist:
                         //   includeItemTypes.AddRange(new[] { nameof(MusicArtist) });
                         //    break;

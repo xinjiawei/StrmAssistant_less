@@ -19,7 +19,7 @@ namespace StrmAssistant.Options
         public string DefaultUICulture { get; set; } = "zh-CN";
 
         [Browsable(false)]
-        public bool DebugMode { get; set; } = false;
+        public bool DebugMode { get; set; } = true;
 
         [Browsable(false)]
         public string GitHubToken { get; set; } = string.Empty;

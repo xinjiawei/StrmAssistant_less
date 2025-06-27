@@ -2,8 +2,9 @@
   "profiles": {
     "EmbySever": {
       "commandName": "Executable",
-      "executablePath": "C:\\Windows\\system32\\cmd.exe",
-      "workingDirectory": "C:\\Users\\XINJIAWEI\\Desktop\\nosync\\vs\\StrmAssistant_less\\system"
+      "executablePath": "C:\\Windows\\System32\\cmd.exe",
+      "workingDirectory": "C:\\Users\\XINJIAWEI\\Desktop\\nosync\\vs\\StrmAssistant_less\\StrmAssistant\\bin\\system",
+      "nativeDebugging": false
     }
   }
 }

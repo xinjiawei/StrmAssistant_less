@@ -32,7 +32,7 @@ namespace StrmAssistant.Options
             [DescriptionL("ItemType_Series_Series", typeof(Resources))] Series,
             [DescriptionL("ItemType_Season_Season", typeof(Resources))] Season,
             [DescriptionL("ItemType_Episode_Episode", typeof(Resources))] Episode,
-            //[DescriptionL("ItemType_Person_Person", typeof(Resources))] Person,
+            [DescriptionL("ItemType_Person_Person", typeof(Resources))] Person,
             [DescriptionL("ItemType_LiveTv_LiveTv", typeof(Resources))] LiveTv,
             //[DescriptionL("ItemType_Music_Music", typeof(Resources))] Music,
             //[DescriptionL("ItemType_MusicAlbum_MusicAlbum", typeof(Resources))] MusicAlbum,
@@ -72,9 +72,10 @@ namespace StrmAssistant.Options
             (Plugin.Instance.ApplicationHost.ApplicationVersion >= new Version("4.8.3.0") &&
              Plugin.Instance.ApplicationHost.ApplicationVersion < new Version("4.9.0.0") ||
              Plugin.Instance.ApplicationHost.ApplicationVersion >= new Version("4.9.0.15") &&
-             Plugin.Instance.ApplicationHost.ApplicationVersion <= new Version("4.9.0.48") ||
-             Plugin.Instance.ApplicationHost.ApplicationVersion >= new Version("4.9.0.49") &&
-             Plugin.Instance.ApplicationHost.ApplicationVersion <= new Version("4.9.0.51"));
+             Plugin.Instance.ApplicationHost.ApplicationVersion <= new Version("4.9.0.51") ||
+             Plugin.Instance.ApplicationHost.ApplicationVersion == new Version("4.9.0.56") ||
+             Plugin.Instance.ApplicationHost.ApplicationVersion == new Version("4.9.0.60") ||
+             Plugin.Instance.ApplicationHost.ApplicationVersion == new Version("4.9.1.3"));
 
         public void Initialize()
         {

@@ -25,8 +25,8 @@ namespace StrmAssistant.Mod
             {
                 if (Plugin.Instance.DebugMode)
                 {
-                    Plugin.Instance.Logger.Debug(e.Message);
-                    Plugin.Instance.Logger.Debug(e.StackTrace);
+                    Plugin.Instance.Logger.Info(e.Message);
+                    Plugin.Instance.Logger.Info(e.StackTrace);
                 }
 
                 Plugin.Instance.Logger.Warn($"{PatchTracker.PatchType.Name} Init Failed");

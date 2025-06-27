@@ -74,7 +74,10 @@ namespace StrmAssistant.Mod
             var embySqlite = Assembly.Load("Emby.Sqlite");
             var baseSqliteRepository = embySqlite.GetType("Emby.Sqlite.BaseSqliteRepository");
             _createConnection = baseSqliteRepository.GetMethod("CreateConnection",
-                BindingFlags.NonPublic | BindingFlags.Instance);
+                BindingFlags.NonPublic | BindingFlags.Instance,
+                null,
+                new[] { typeof(bool) },
+                null);
             _dbFilePath =
                 baseSqliteRepository.GetProperty("DbFilePath", BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -101,7 +104,7 @@ namespace StrmAssistant.Mod
 
             if (Plugin.Instance.DebugMode)
             {
-                Plugin.Instance.Logger.Debug("EnhanceChineseSearch - PatchPhase1 Failed");
+                Plugin.Instance.Logger.Info("EnhanceChineseSearch - PatchPhase1 Failed");
             }
             
             ResetOptions();
@@ -189,9 +192,9 @@ namespace StrmAssistant.Mod
             {
                 if (Plugin.Instance.DebugMode)
                 {
-                    Plugin.Instance.Logger.Debug("EnhanceChineseSearch - PatchPhase2 Failed");
-                    Plugin.Instance.Logger.Debug(e.Message);
-                    Plugin.Instance.Logger.Debug(e.StackTrace);
+                    Plugin.Instance.Logger.Info("EnhanceChineseSearch - PatchPhase2 Failed");
+                    Plugin.Instance.Logger.Info(e.Message);
+                    Plugin.Instance.Logger.Info(e.StackTrace);
                 }
             }
 
@@ -253,9 +256,9 @@ namespace StrmAssistant.Mod
 
                 if (Plugin.Instance.DebugMode)
                 {
-                    Plugin.Instance.Logger.Debug("EnhanceChineseSearch - RebuildFts Failed");
-                    Plugin.Instance.Logger.Debug(e.Message);
-                    Plugin.Instance.Logger.Debug(e.StackTrace);
+                    Plugin.Instance.Logger.Info("EnhanceChineseSearch - RebuildFts Failed");
+                    Plugin.Instance.Logger.Info(e.Message);
+                    Plugin.Instance.Logger.Info(e.StackTrace);
                 }
             }
 
@@ -316,9 +319,9 @@ namespace StrmAssistant.Mod
             {
                 if (Plugin.Instance.DebugMode)
                 {
-                    Plugin.Instance.Logger.Debug("EnhanceChineseSearch - EnsureTokenizerExists Failed");
-                    Plugin.Instance.Logger.Debug(e.Message);
-                    Plugin.Instance.Logger.Debug(e.StackTrace);
+                    Plugin.Instance.Logger.Info("EnhanceChineseSearch - EnsureTokenizerExists Failed");
+                    Plugin.Instance.Logger.Info(e.Message);
+                    Plugin.Instance.Logger.Info(e.StackTrace);
                 }
             }
 
@@ -418,8 +421,8 @@ namespace StrmAssistant.Mod
                 if (Plugin.Instance.DebugMode)
                 {
                     Plugin.Instance.Logger.Warn("EnhanceChineseSearch - Load tokenizer failed.");
-                    Plugin.Instance.Logger.Debug(e.Message);
-                    Plugin.Instance.Logger.Debug(e.StackTrace);
+                    Plugin.Instance.Logger.Info(e.Message);
+                    Plugin.Instance.Logger.Info(e.StackTrace);
                 }
             }
 

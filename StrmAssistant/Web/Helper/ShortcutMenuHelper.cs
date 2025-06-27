@@ -23,7 +23,7 @@ namespace StrmAssistant.Web.Helper
             {
                 Plugin.Instance.Logger.Error($"{nameof(ShortcutMenuHelper)} Init Failed");
                 Plugin.Instance.Logger.Error(e.Message);
-                Plugin.Instance.Logger.Debug(e.StackTrace);
+                Plugin.Instance.Logger.Info(e.StackTrace);
             }
         }
 
@@ -166,7 +166,7 @@ setTimeout(() => {
             {
                 if (Plugin.Instance.DebugMode)
                 {
-                    Plugin.Instance.Logger.Debug($"{nameof(ShortcutMenuHelper)} - Emby.DataExplorer2 plugin is installed");
+                    Plugin.Instance.Logger.Info($"{nameof(ShortcutMenuHelper)} - Emby.DataExplorer2 plugin is installed");
                 }
 
                 var contextMenuHelperType = dataExplorer2Assembly.GetType("Emby.DataExplorer2.Api.ContextMenuHelper");

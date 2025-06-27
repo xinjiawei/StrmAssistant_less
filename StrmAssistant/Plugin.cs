@@ -14,14 +14,11 @@ using MediaBrowser.Model.Tasks;
 using StrmAssistant.Mod;
 using StrmAssistant.Options.Store;
 using StrmAssistant.Options.View;
-using StrmAssistant.Properties;
 using StrmAssistant.Web.Helper;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using static StrmAssistant.Options.Utility;
@@ -52,7 +49,7 @@ namespace StrmAssistant
         {
             Instance = this;
             Logger = logManager.GetLogger(Name);
-            Logger.Info("Plugin is getting loaded.");
+            Logger.Info("StrmAssistant_less Plugin is getting loaded.");
             ApplicationHost = applicationHost;
             ApplicationPaths = applicationPaths;
 
@@ -108,7 +105,7 @@ namespace StrmAssistant
         public CultureInfo DefaultUICulture =>
             new CultureInfo(MainOptionsStore.GetOptions().AboutOptions.DefaultUICulture);
 
-        public bool DebugMode;
+        public bool DebugMode = true;
 
         public bool IsModSupported => RuntimeInformation.ProcessArchitecture == Architecture.X64;
 
