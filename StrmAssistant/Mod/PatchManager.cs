@@ -195,7 +195,7 @@ namespace StrmAssistant.Mod
                     if (Plugin.Instance.DebugMode)
                     {
                         Plugin.Instance.Logger.Info(
-                            $"{action} {(targetMethod.DeclaringType != null ? targetMethod.DeclaringType.Name + "." : string.Empty)}{targetMethod.Name} for {tracker.PatchType.Name} Success");
+                            $"{action} {(targetMethod.DeclaringType != null ? targetMethod.DeclaringType.Name + "." : string.Empty)}{targetMethod.Name} for {tracker.PatchType.Name} Success1");
                     }
                 }
 

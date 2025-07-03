@@ -3,7 +3,7 @@
     "EmbySever": {
       "commandName": "Executable",
       "executablePath": "C:\\Windows\\System32\\cmd.exe",
-      "workingDirectory": "C:\\Users\\XINJIAWEI\\Desktop\\nosync\\vs\\StrmAssistant_less\\StrmAssistant\\bin\\system",
+      "workingDirectory": "C:\\Users\\Administrator\\Desktop\\nosync\\StrmAssistant_less",
       "nativeDebugging": false
     }
   }

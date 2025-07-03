@@ -1,21 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net6.0</TargetFrameworks>
-    <AssemblyVersion>1.4.9.1.3</AssemblyVersion>
-    <FileVersion>1.4.9.1.3</FileVersion>
+    <AssemblyVersion>1.4913</AssemblyVersion>
+    <FileVersion>1.4913</FileVersion>
     <CopyLocalLockFileAssemblies>True</CopyLocalLockFileAssemblies>
     <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
     <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Tokenizer\linux\libsimple.so" />
-    <None Remove="Tokenizer\win\libsimple.so" />
+    <None Remove="Tokenizer\win\simple.dll" />
     <None Remove="Web\Resources\strmassistant.js" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\thumb.png" />
     <EmbeddedResource Include="Tokenizer\linux\libsimple.so" />
-    <EmbeddedResource Include="Tokenizer\win\libsimple.so" />
+    <EmbeddedResource Include="Tokenizer\win\simple.dll" />
     <EmbeddedResource Include="Web\Resources\strmassistant.js" />
   </ItemGroup>
   <ItemGroup>

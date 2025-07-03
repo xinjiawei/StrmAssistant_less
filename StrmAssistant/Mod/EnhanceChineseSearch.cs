@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using System.Threading;
 using static StrmAssistant.Mod.PatchManager;
 using static StrmAssistant.Options.Utility;
 
@@ -43,7 +44,19 @@ namespace StrmAssistant.Mod
 
         public EnhanceChineseSearch()
         {
-            _tokenizerPath = Path.Combine(Plugin.Instance.ApplicationPaths.PluginsPath, "libsimple.so");
+
+            switch (Environment.OSVersion.Platform)
+            {
+                case PlatformID.Win32NT when Environment.Is64BitOperatingSystem:
+                    _tokenizerPath = Path.Combine(Plugin.Instance.ApplicationPaths.PluginsPath, "simple.dll");
+                    break;
+                case PlatformID.Unix when Environment.Is64BitOperatingSystem:
+                    _tokenizerPath = Path.Combine(Plugin.Instance.ApplicationPaths.PluginsPath, "libsimple.so");
+                    break;
+                default:
+                    ResetOptions();
+                    break;
+            }
 
             Initialize();
 
@@ -76,7 +89,7 @@ namespace StrmAssistant.Mod
             _createConnection = baseSqliteRepository.GetMethod("CreateConnection",
                 BindingFlags.NonPublic | BindingFlags.Instance,
                 null,
-                new[] { typeof(bool) },
+                new[] { typeof(bool), typeof(CancellationToken) },
                 null);
             _dbFilePath =
                 baseSqliteRepository.GetProperty("DbFilePath", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -282,6 +295,8 @@ namespace StrmAssistant.Mod
                 if (File.Exists(_tokenizerPath))
                 {
                     var existingSha1 = ComputeSha1(_tokenizerPath);
+                    Plugin.Instance.Logger.Info(
+                               $"EnhanceChineseSearch - Tokenizer SHA-1:{existingSha1}");
 
                     if (expectedSha1.ContainsValue(existingSha1))
                     {
@@ -344,7 +359,7 @@ namespace StrmAssistant.Mod
         private static string GetTokenizerResourceName()
         {
             var tokenizerNamespace = Assembly.GetExecutingAssembly().GetName().Name + ".Tokenizer";
-            var winSimpleTokenizer = $"{tokenizerNamespace}.win.libsimple.so";
+            var winSimpleTokenizer = $"{tokenizerNamespace}.win.simple.dll";
             var linuxSimpleTokenizer = $"{tokenizerNamespace}.linux.libsimple.so";
 
             switch (Environment.OSVersion.Platform)
@@ -366,13 +381,16 @@ namespace StrmAssistant.Mod
                     return new Dictionary<Version, string>
                     {
                         { new Version(0, 4, 0), "a83d90af9fb88e75a1ddf2436c8b67954c761c83" },
-                        { new Version(0, 5, 0), "aed57350b46b51bb7d04321b7fe8e5e60b0cdbdc" }
+                        { new Version(0, 5, 0), "aed57350b46b51bb7d04321b7fe8e5e60b0cdbdc" },
+                        { new Version(0, 5, 2), "338bb0915d6f4625b54f041bdeb6791b6e590c4e" }
+                        // 
                     };
                 case PlatformID.Unix:
                     return new Dictionary<Version, string>
                     {
                         { new Version(0, 4, 0), "f7fb8ba0b98e358dfaa87570dc3426ee7f00e1b6" },
-                        { new Version(0, 5, 0), "8e36162f96c67d77c44b36093f31ae4d297b15c0" }
+                        { new Version(0, 5, 0), "8e36162f96c67d77c44b36093f31ae4d297b15c0" },
+                        { new Version(0, 5, 2), "e89eeb7938894e4e8b284896285e7dc90da715bc" }
                     };
                 default:
                     return null;
@@ -430,18 +448,25 @@ namespace StrmAssistant.Mod
         }
 
         [HarmonyPostfix]
-        private static void CreateConnectionPostfix(object __instance, bool isReadOnly,
+        private static void CreateConnectionPostfix(object __instance, [HarmonyArgument("isReadOnly")] bool isReadOnly, [HarmonyArgument("cancellationToken")] CancellationToken cancellationToken,
             ref IDatabaseConnection __result)
         {
+            if (!isReadOnly)
+            {
+                Plugin.Instance.Logger.Info("EnhanceChineseSearch - CreateConnectionPostfix: " + isReadOnly + " " + _patchPhase2Initialized);
+            }
+           
             if (!isReadOnly && !_patchPhase2Initialized)
             {
                 lock (_lock)
                 {
+                    Plugin.Instance.Logger.Info("EnhanceChineseSearch - CreateConnectionPostfix Start: " + isReadOnly + " " + _patchPhase2Initialized);
                     if (!_patchPhase2Initialized)
                     {
                         var db = _dbFilePath.GetValue(__instance) as string;
                         if (db?.EndsWith("library.db", StringComparison.OrdinalIgnoreCase) != true)
                         {
+                            Plugin.Instance.Logger.Info("EnhanceChineseSearch - _dbFilePath Err");
                             return;
                         }
 
@@ -449,8 +474,13 @@ namespace StrmAssistant.Mod
 
                         if (tokenizerLoaded)
                         {
+                            Plugin.Instance.Logger.Info("EnhanceChineseSearch - tokenizerLoaded Load Success");
                             _patchPhase2Initialized = true;
                             PatchPhase2(__result);
+                        }
+                        else
+                        {
+                            Plugin.Instance.Logger.Info("EnhanceChineseSearch - tokenizerLoaded Load Err"); 
                         }
                     }
                 }

@@ -62,7 +62,7 @@ namespace StrmAssistant
             if (MainOptionsStore.GetOptions().AboutOptions.DebugMode)
             {
                 DebugMode = true;
-                MainOptionsStore.GetOptions().AboutOptions.DebugMode = false;
+                MainOptionsStore.GetOptions().AboutOptions.DebugMode = true;
                 MainOptionsStore.SavePluginOptionsSuppress();
             }
             else if (Debugger.IsAttached)
