@@ -42,33 +42,11 @@ namespace StrmAssistant.Mod
                 }
             }
 
-            ////EnableImageCapture = new EnableImageCapture();
-
             // Ä£ºýËÑË÷
             EnhanceChineseSearch = new EnhanceChineseSearch();
             // Ä£ºýËÑË÷
-
-            ////MovieDbEpisodeGroup = new MovieDbEpisodeGroup();
-            ////MergeMultiVersion = new MergeMultiVersion();
-            ////ExclusiveExtract = new ExclusiveExtract();
-            ////ChineseMovieDb = new ChineseMovieDb();
-            ////ChineseTvdb = new ChineseTvdb();
-            ////EnhanceMovieDbPerson = new EnhanceMovieDbPerson();
-            ////AltMovieDbConfig = new AltMovieDbConfig();
             EnableProxyServer = new EnableProxyServer();
-            ////PreferOriginalPoster = new PreferOriginalPoster();
-            ////UnlockIntroSkip = new UnlockIntroSkip();
-            ////PinyinSortName = new PinyinSortName();
-            ////EnhanceNfoMetadata = new EnhanceNfoMetadata();
-            ////HidePersonNoImage = new HidePersonNoImage();
-            ////EnforceLibraryOrder = new EnforceLibraryOrder();
-            ////BeautifyMissingMetadata = new BeautifyMissingMetadata();
-            ////EnhanceMissingEpisodes = new EnhanceMissingEpisodes();
-            ////ChapterChangeTracker = new ChapterChangeTracker();
-            ////NoBoxsetsAutoCreation = new NoBoxsetsAutoCreation();
-            ////EnhanceNotificationSystem = new EnhanceNotificationSystem();
-            ////EnableDeepDelete = new EnableDeepDelete();
-            ////SuppressPluginUpdate = new SuppressPluginUpdate();
+
         }
 
         public static bool IsPatched(MethodBase methodInfo, Type type)
@@ -195,7 +173,7 @@ namespace StrmAssistant.Mod
                     if (Plugin.Instance.DebugMode)
                     {
                         Plugin.Instance.Logger.Info(
-                            $"{action} {(targetMethod.DeclaringType != null ? targetMethod.DeclaringType.Name + "." : string.Empty)}{targetMethod.Name} for {tracker.PatchType.Name} Success1");
+                            $"{action} 1206 {(targetMethod.DeclaringType != null ? targetMethod.DeclaringType.Name + "." : string.Empty)}{targetMethod.Name} for {tracker.PatchType.Name} Success1");
                     }
                 }
 

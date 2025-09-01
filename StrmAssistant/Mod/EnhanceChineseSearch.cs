@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using static StrmAssistant.Mod.PatchManager;
@@ -117,7 +118,7 @@ namespace StrmAssistant.Mod
 
             if (Plugin.Instance.DebugMode)
             {
-                Plugin.Instance.Logger.Info("EnhanceChineseSearch - PatchPhase1 Failed");
+                Plugin.Instance.Logger.Info("EnhanceChineseSearch 1207 - PatchPhase1 Failed");
             }
             
             ResetOptions();
@@ -181,6 +182,7 @@ namespace StrmAssistant.Mod
                     }
                     else if (Plugin.Instance.MainOptionsStore.GetOptions().ModOptions.EnhanceChineseSearch)
                     {
+                        // PatchUnpatch
                         patchSearchFunctionsResult = PatchSearchFunctions();
 
                         if (patchSearchFunctionsResult)
@@ -296,7 +298,7 @@ namespace StrmAssistant.Mod
                 {
                     var existingSha1 = ComputeSha1(_tokenizerPath);
                     Plugin.Instance.Logger.Info(
-                               $"EnhanceChineseSearch - Tokenizer SHA-1:{existingSha1}");
+                               $"EnhanceChineseSearch 1207 - Tokenizer SHA-1:{existingSha1}");
 
                     if (expectedSha1.ContainsValue(existingSha1))
                     {
@@ -306,13 +308,13 @@ namespace StrmAssistant.Mod
                         if (existingSha1 == highestSha1)
                         {
                             Plugin.Instance.Logger.Info(
-                                $"EnhanceChineseSearch - Tokenizer exists with matching SHA-1 for the highest version {highestVersion}");
+                                $"EnhanceChineseSearch 1208 - Tokenizer exists with matching SHA-1 for the highest version {highestVersion}");
                         }
                         else
                         {
                             var currentVersion = expectedSha1.FirstOrDefault(x => x.Value == existingSha1).Key;
                             Plugin.Instance.Logger.Info(
-                                $"EnhanceChineseSearch - Tokenizer exists for version {currentVersion} but does not match the highest version {highestVersion}. Upgrading...");
+                                $"EnhanceChineseSearch 1209 - Tokenizer exists for version {currentVersion} but does not match the highest version {highestVersion}. Upgrading...");
                             ExportTokenizer(resourceName);
                         }
 
@@ -320,12 +322,12 @@ namespace StrmAssistant.Mod
                     }
 
                     Plugin.Instance.Logger.Info(
-                        "EnhanceChineseSearch - Tokenizer exists but SHA-1 is not recognized. No action taken.");
+                        "EnhanceChineseSearch 1210 - Tokenizer exists but SHA-1 is not recognized. No action taken.");
 
                     return true;
                 }
 
-                Plugin.Instance.Logger.Info("EnhanceChineseSearch - Tokenizer does not exist. Exporting...");
+                Plugin.Instance.Logger.Info("EnhanceChineseSearch 1211 - Tokenizer does not exist. Exporting...");
                 ExportTokenizer(resourceName);
 
                 return true;
@@ -334,7 +336,7 @@ namespace StrmAssistant.Mod
             {
                 if (Plugin.Instance.DebugMode)
                 {
-                    Plugin.Instance.Logger.Info("EnhanceChineseSearch - EnsureTokenizerExists Failed");
+                    Plugin.Instance.Logger.Info("EnhanceChineseSearch 1213 - EnsureTokenizerExists Failed");
                     Plugin.Instance.Logger.Info(e.Message);
                     Plugin.Instance.Logger.Info(e.StackTrace);
                 }
@@ -353,7 +355,7 @@ namespace StrmAssistant.Mod
                 }
             }
 
-            Plugin.Instance.Logger.Info($"EnhanceChineseSearch - Exported {resourceName} to {_tokenizerPath}");
+            Plugin.Instance.Logger.Info($"EnhanceChineseSearch 1212 - Exported {resourceName} to {_tokenizerPath}");
         }
 
         private static string GetTokenizerResourceName()
@@ -415,12 +417,33 @@ namespace StrmAssistant.Mod
 
         private static bool PatchSearchFunctions()
         {
-            return PatchUnpatch(Instance.PatchTracker, true, _getJoinCommandText,
-                       postfix: nameof(GetJoinCommandTextPostfix)) &&
-                   PatchUnpatch(Instance.PatchTracker, true, _createSearchTerm,
-                       prefix: nameof(CreateSearchTermPrefix)) &&
-                   PatchUnpatch(Instance.PatchTracker, true,
-                       _cacheIdsFromTextParams, prefix: nameof(CacheIdsFromTextParamsPrefix));
+
+            Plugin.Instance.Logger.Info("EnhanceChineseSearch - PatchUnpatch _getJoinCommandText");
+
+            bool patchedJoinCommand = PatchUnpatch(
+                Instance.PatchTracker,
+                true,
+                _getJoinCommandText,
+                postfix: nameof(GetJoinCommandTextPostfix)
+            );
+
+            Plugin.Instance.Logger.Info("EnhanceChineseSearch - PatchUnpatch _createSearchTerm");
+            bool patchedSearchTerm = PatchUnpatch(
+                Instance.PatchTracker,
+                true,
+                _createSearchTerm,
+                prefix: nameof(CreateSearchTermPrefix)
+            );
+
+            Plugin.Instance.Logger.Info("EnhanceChineseSearch - PatchUnpatch _cacheIdsFromTextParams");
+            bool patchedCacheIds = PatchUnpatch(
+                Instance.PatchTracker,
+                true,
+                _cacheIdsFromTextParams,
+                prefix: nameof(CacheIdsFromTextParamsPrefix)
+            );
+
+            return patchedJoinCommand && patchedSearchTerm && patchedCacheIds;
         }
 
         private static bool LoadTokenizerExtension(IDatabaseConnection connection)
@@ -488,25 +511,47 @@ namespace StrmAssistant.Mod
         }
 
         [HarmonyPostfix]
-        private static void GetJoinCommandTextPostfix(InternalItemsQuery query,
-            List<KeyValuePair<string, string>> bindParams, string mediaItemsTableQualifier, ref string __result)
+        private static void GetJoinCommandTextPostfix(
+            InternalItemsQuery query,
+            List<KeyValuePair<string, string>> bindParams, 
+            string mediaItemsTableQualifier, 
+            ref StringBuilder __result)
         {
-            if (!string.IsNullOrEmpty(query.SearchTerm) && __result.Contains("match @SearchTerm"))
+            // 把当前 SQL 拿成字符串方便处理
+            var sql = __result.ToString();
+            var newSql = sql;
+
+            // 是否包含 match @SearchTerm（大小写/空格更稳健的写法见下）
+            bool hasMatchParam =
+                newSql.IndexOf("match @SearchTerm", StringComparison.OrdinalIgnoreCase) >= 0
+                || System.Text.RegularExpressions.Regex.IsMatch(newSql, @"\bmatch\b\s*\(?\s*@SearchTerm\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            if (!string.IsNullOrEmpty(query.SearchTerm) && hasMatchParam)
             {
-                if (!Plugin.Instance.MainOptionsStore.GetOptions().ModOptions.ExcludeOriginalTitleFromSearch)
-                {
-                    __result = __result.Replace("match @SearchTerm", "match simple_query(@SearchTerm)");
-                }
-                else
-                {
-                    __result = __result.Replace("match @SearchTerm", "match '-OriginalTitle:' || simple_query(@SearchTerm)");
-                }
+                // 生成替换内容
+                var replacement = Plugin.Instance.MainOptionsStore.GetOptions().ModOptions.ExcludeOriginalTitleFromSearch
+                    ? "match '-OriginalTitle:' || simple_query(@SearchTerm)"
+                    : "match simple_query(@SearchTerm)";
+
+                // 用 Regex 更鲁棒地替换（可覆盖大小写、可选括号与空格）
+                newSql = System.Text.RegularExpressions.Regex.Replace(
+                    newSql,
+                    @"\bmatch\b\s*\(?\s*@SearchTerm\b",
+                    replacement,
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                );
             }
 
-            if (!string.IsNullOrEmpty(query.Name) && __result.Contains("match @SearchTerm"))
+            if (!string.IsNullOrEmpty(query.Name) && hasMatchParam)
             {
-                __result = __result.Replace("match @SearchTerm", "match 'Name:' || simple_query(@SearchTerm)");
+                newSql = System.Text.RegularExpressions.Regex.Replace(
+                    newSql,
+                    @"\bmatch\b\s*\(?\s*@SearchTerm\b",
+                    "match 'Name:' || simple_query(@SearchTerm)",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                );
 
+                // 这里 bindParams 是 List<...>，可原地修改
                 for (var i = 0; i < bindParams.Count; i++)
                 {
                     var kvp = bindParams[i];
@@ -526,6 +571,12 @@ namespace StrmAssistant.Mod
                         bindParams[i] = new KeyValuePair<string, string>(kvp.Key, currentValue);
                     }
                 }
+            }
+
+            // 如果有变化，回写到 StringBuilder
+            if (!ReferenceEquals(sql, newSql) && !string.Equals(sql, newSql, StringComparison.Ordinal))
+            {
+                __result.Clear().Append(newSql); // 不要给 __result 重新赋一个新的 StringBuilder，直接 Clear+Append。
             }
         }
 
