@@ -10,3 +10,4 @@ build/
 [Bb]in/
 [Oo]bj/
 /system
+/StrmAssistant/Properties/launchSettings.json

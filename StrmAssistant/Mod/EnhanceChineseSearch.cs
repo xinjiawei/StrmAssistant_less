@@ -98,8 +98,19 @@ namespace StrmAssistant.Mod
             var embyServerImplementationsAssembly = Assembly.Load("Emby.Server.Implementations");
             var sqliteItemRepository =
                 embyServerImplementationsAssembly.GetType("Emby.Server.Implementations.Data.SqliteItemRepository");
-            _getJoinCommandText = sqliteItemRepository.GetMethod("GetJoinCommandText",
-                BindingFlags.NonPublic | BindingFlags.Instance);
+            _getJoinCommandText = sqliteItemRepository.GetMethod(
+                "GetJoinCommandText",
+                BindingFlags.NonPublic | BindingFlags.Instance,
+                null,
+                new[] {
+                    typeof(InternalItemsQuery),
+                    typeof(List<KeyValuePair<string, string>>),
+                    typeof(string),
+                    typeof(string), // itemLinks2TableQualifier 参数
+                    typeof(bool)    // allowJoinOnItemLinks 参数
+                },
+                null
+                );
             _createSearchTerm =
                 sqliteItemRepository.GetMethod("CreateSearchTerm", BindingFlags.NonPublic | BindingFlags.Static);
             _cacheIdsFromTextParams = sqliteItemRepository.GetMethod("CacheIdsFromTextParams",
@@ -453,9 +464,16 @@ namespace StrmAssistant.Mod
 
                 var db = sqlite3_db.GetValue(connection);
                 sqlite3_enable_load_extension.Invoke(raw, new[] { db, 1 });
+                Plugin.Instance.Logger.Info("LoadTokenizerExtension 1301 - _tokenizerPath: " +  _tokenizerPath);
                 connection.Execute("SELECT load_extension('" + _tokenizerPath + "')");
 
                 return true;
+            }
+            catch (SQLitePCL.pretty.SQLiteException ex)
+            {
+                Plugin.Instance.Logger.Error("Failed to load extension: " + ex.Message);
+                // 可以打印更详细的错误信息
+                Plugin.Instance.Logger.Error(ex.StackTrace);
             }
             catch (Exception e)
             {

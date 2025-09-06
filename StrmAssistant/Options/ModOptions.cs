@@ -69,7 +69,7 @@ namespace StrmAssistant.Options
         [Browsable(false)]
         public bool IsChineseSearchSupported =>
             EnhanceChineseSearch || RuntimeInformation.ProcessArchitecture == Architecture.X64 &&
-            (Plugin.Instance.ApplicationHost.ApplicationVersion == new Version("4.9.1.23"));
+            (Plugin.Instance.ApplicationHost.ApplicationVersion == new Version("4.9.1.26"));
 
         public void Initialize()
         {
