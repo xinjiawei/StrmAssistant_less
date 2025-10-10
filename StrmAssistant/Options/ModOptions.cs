@@ -34,19 +34,9 @@ namespace StrmAssistant.Options
             [DescriptionL("ItemType_Episode_Episode", typeof(Resources))] Episode,
             [DescriptionL("ItemType_Person_Person", typeof(Resources))] Person,
             [DescriptionL("ItemType_LiveTv_LiveTv", typeof(Resources))] LiveTv,
-            //[DescriptionL("ItemType_Music_Music", typeof(Resources))] Music,
-            //[DescriptionL("ItemType_MusicAlbum_MusicAlbum", typeof(Resources))] MusicAlbum,
-            //[DescriptionL("ItemType_MusicArtist_MusicArtist", typeof(Resources))] MusicArtist,
+
             [DescriptionL("ItemType_Playlist_Playlist", typeof(Resources))] Playlist,
             [DescriptionL("ItemType_Video_Video", typeof(Resources))] Video,
-            //[DescriptionL("ItemType_Photo_Photo", typeof(Resources))] Photo,
-            //[DescriptionL("ItemType_PhotoAlbum_PhotoAlbum", typeof(Resources))] PhotoAlbum,
-            //[DescriptionL("ItemType_Genre_Genre", typeof(Resources))] Genre,
-            //[DescriptionL("ItemType_Book_Book", typeof(Resources))] Book,
-            //[DescriptionL("ItemType_Game_Game", typeof(Resources))] Game,
-            //[DescriptionL("ItemType_Trailer_Trailer", typeof(Resources))] Trailer,
-            //[DescriptionL("ItemType_Tag_Tag", typeof(Resources))] Tag,
-            //[DescriptionL("ItemType_Studio_Studio", typeof(Resources))] Studio
         }
 
         [Browsable(false)]
@@ -69,7 +59,7 @@ namespace StrmAssistant.Options
         [Browsable(false)]
         public bool IsChineseSearchSupported =>
             EnhanceChineseSearch || RuntimeInformation.ProcessArchitecture == Architecture.X64 &&
-            (Plugin.Instance.ApplicationHost.ApplicationVersion == new Version("4.9.1.26"));
+            (Plugin.Instance.ApplicationHost.ApplicationVersion == new Version("4.9.1.80"));
 
         public void Initialize()
         {

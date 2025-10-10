@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net6.0</TargetFrameworks>
-    <AssemblyVersion>4.9.1.26</AssemblyVersion>
-    <FileVersion>4.9.1.26</FileVersion>
+    <AssemblyVersion>4.9.1.80</AssemblyVersion>
+    <FileVersion>4.9.1.80</FileVersion>
     <CopyLocalLockFileAssemblies>True</CopyLocalLockFileAssemblies>
     <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
     <LangVersion>8.0</LangVersion>
