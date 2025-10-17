@@ -3,6 +3,7 @@ using MediaBrowser.Controller.Entities;
 using SQLitePCL.pretty;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -87,11 +88,27 @@ namespace StrmAssistant.Mod
 
             var embySqlite = Assembly.Load("Emby.Sqlite");
             var baseSqliteRepository = embySqlite.GetType("Emby.Sqlite.BaseSqliteRepository");
-            _createConnection = baseSqliteRepository.GetMethod("CreateConnection",
-                BindingFlags.NonPublic | BindingFlags.Instance,
-                null,
-                new[] { typeof(bool), typeof(CancellationToken) },
-                null);
+
+            switch (Environment.OSVersion.Platform)
+            {
+                case PlatformID.Win32NT when Environment.Is64BitOperatingSystem:
+                    _createConnection = baseSqliteRepository.GetMethod("CreateNewConnection",
+                        BindingFlags.NonPublic | BindingFlags.Instance,
+                        null,
+                        new[] { typeof(bool)},
+                        null);
+                    break;
+                case PlatformID.Unix when Environment.Is64BitOperatingSystem:
+                    _createConnection = baseSqliteRepository.GetMethod("CreateConnection",
+                        BindingFlags.NonPublic | BindingFlags.Instance,
+                        null,
+                        new[] { typeof(bool), typeof(CancellationToken) },
+                        null);
+                    break;
+                default:
+                    ResetOptions();
+                    break;
+            }
             _dbFilePath =
                 baseSqliteRepository.GetProperty("DbFilePath", BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -122,14 +139,46 @@ namespace StrmAssistant.Mod
             // No action needed
         }
 
+        private static bool CreateConnectionPostfixPlatform()
+        {
+            switch (Environment.OSVersion.Platform)
+            {
+                case PlatformID.Win32NT when Environment.Is64BitOperatingSystem:
+                    Plugin.Instance.Logger.Debug("CreateNewConnection start");
+                    return PatchUnpatch(
+                        Instance.PatchTracker,
+                        true,
+                        _createConnection,
+                        postfix: nameof(CreateConnectionPostfixWin)
+                        );
+                case PlatformID.Unix when Environment.Is64BitOperatingSystem:
+                    Plugin.Instance.Logger.Debug("CreateConnection start");
+                    return PatchUnpatch(
+                        Instance.PatchTracker,
+                        true,
+                        _createConnection,
+                        postfix: nameof(CreateConnectionPostfixLinux)
+                        );
+                default:
+                    return false;
+            }
+        }
+
         private static void PatchPhase1()
         {
-            if (EnsureTokenizerExists() && PatchUnpatch(Instance.PatchTracker, true, _createConnection,
-                    postfix: nameof(CreateConnectionPostfix))) return;
+            Plugin.Instance.Logger.Debug("Debug PatchUnpatch 01");
+            if (
+                EnsureTokenizerExists() && CreateConnectionPostfixPlatform()
+                )
+            {
+                Plugin.Instance.Logger.Debug("Debug PatchUnpatch 01 success");
+                return;
+            }
+            
 
             if (Plugin.Instance.DebugMode)
             {
-                Plugin.Instance.Logger.Debug("EnhanceChineseSearch 1207 - PatchPhase1 Failed");
+                Plugin.Instance.Logger.Debug("EnhanceChineseSearch 1301 - PatchPhase1 Failed");
             }
             
             ResetOptions();
@@ -430,9 +479,7 @@ namespace StrmAssistant.Mod
 
         private static bool PatchSearchFunctions()
         {
-
             Plugin.Instance.Logger.Debug("EnhanceChineseSearch - PatchUnpatch _getJoinCommandText");
-
             bool patchedJoinCommand = PatchUnpatch(
                 Instance.PatchTracker,
                 true,
@@ -491,19 +538,74 @@ namespace StrmAssistant.Mod
         }
 
         [HarmonyPostfix]
-        private static void CreateConnectionPostfix(object __instance, [HarmonyArgument("isReadOnly")] bool isReadOnly, [HarmonyArgument("cancellationToken")] CancellationToken cancellationToken,
+        private static void CreateConnectionPostfixWin(object __instance, [HarmonyArgument("isReadOnly")] bool isReadOnly,
             ref IDatabaseConnection __result)
         {
-            if (!isReadOnly)
+            Plugin.Instance.Logger.Debug("CreateConnectionPostfixWin start");
+            // 俩都是false才能进入
+            if (Plugin.Instance.DebugMode)
             {
-                Plugin.Instance.Logger.Debug("EnhanceChineseSearch - CreateConnectionPostfix: " + isReadOnly + " " + _patchPhase2Initialized);
+                var dbtest = _dbFilePath.GetValue(__instance) as string;
+                Plugin.Instance.Logger.Debug("EnhanceChineseSearch - " + isReadOnly + " ：" + _patchPhase2Initialized + " : " + dbtest);
             }
-           
+            else
+            {
+                Plugin.Instance.Logger.Debug("EnhanceChineseSearch - " + isReadOnly + " ：" + _patchPhase2Initialized);
+            }
+            if (!_patchPhase2Initialized)
+            {
+                lock (_lock)
+                {
+                    
+                    if (!_patchPhase2Initialized)
+                    {
+                        var db = _dbFilePath.GetValue(__instance) as string;
+                        if (db?.EndsWith("library.db", StringComparison.OrdinalIgnoreCase) != true)
+                        {
+                            Plugin.Instance.Logger.Debug("EnhanceChineseSearch - _dbFilePath Err :" + db);
+                            return;
+                        }
+
+                        var tokenizerLoaded = LoadTokenizerExtension(__result);
+
+                        if (tokenizerLoaded)
+                        {
+                            Plugin.Instance.Logger.Info("EnhanceChineseSearch - tokenizerLoaded Load Success");
+                            _patchPhase2Initialized = true;
+                            PatchPhase2(__result);
+                        }
+                        else
+                        {
+                            Plugin.Instance.Logger.Info("EnhanceChineseSearch - tokenizerLoaded Load Err"); 
+                        }
+                    }
+                }
+            }
+        }
+
+
+        [HarmonyPostfix]
+        private static void CreateConnectionPostfixLinux(object __instance, [HarmonyArgument("isReadOnly")] bool isReadOnly, [HarmonyArgument("cancellationToken")] CancellationToken cancellationToken,
+    ref IDatabaseConnection __result)
+        {
+            Plugin.Instance.Logger.Debug("CreateConnectionPostfix start");
+
+            // 俩都是false才能进入
+            if (Plugin.Instance.DebugMode)
+            {
+                var dbtest = _dbFilePath.GetValue(__instance) as string;
+                Plugin.Instance.Logger.Debug("EnhanceChineseSearch - " + isReadOnly + " ：" + _patchPhase2Initialized + " : " + dbtest);
+            }
+            else
+            {
+                Plugin.Instance.Logger.Debug("EnhanceChineseSearch - " + isReadOnly + " ：" + _patchPhase2Initialized);
+            }
+
             if (!isReadOnly && !_patchPhase2Initialized)
             {
                 lock (_lock)
                 {
-                    Plugin.Instance.Logger.Debug("EnhanceChineseSearch - CreateConnectionPostfix Start: " + isReadOnly + " " + _patchPhase2Initialized);
+
                     if (!_patchPhase2Initialized)
                     {
                         var db = _dbFilePath.GetValue(__instance) as string;
@@ -523,7 +625,7 @@ namespace StrmAssistant.Mod
                         }
                         else
                         {
-                            Plugin.Instance.Logger.Info("EnhanceChineseSearch - tokenizerLoaded Load Err"); 
+                            Plugin.Instance.Logger.Info("EnhanceChineseSearch - tokenizerLoaded Load Err");
                         }
                     }
                 }

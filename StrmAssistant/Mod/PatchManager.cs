@@ -202,6 +202,7 @@ namespace StrmAssistant.Mod
             {
                 if (usageCount == 0)
                 {
+                    Plugin.Instance.Logger.Debug("Debug PatchUnpatch 02");
                     if (PatchUnpatch(tracker, true, targetMethod, prefix, postfix, transpiler, finalizer, suppress))
                     {
                         usageCount++;
@@ -222,6 +223,7 @@ namespace StrmAssistant.Mod
 
                 if (usageCount == 0)
                 {
+                    Plugin.Instance.Logger.Debug("Debug PatchUnpatch 03");
                     return PatchUnpatch(tracker, false, targetMethod, prefix, postfix, transpiler, finalizer, suppress);
                 }
             }
