@@ -36,7 +36,7 @@ namespace StrmAssistant.Options.Store
             _currentSuppressOnOptionsSaved = true;
             SetOptions(PluginOptions);
         }
-        
+
         private void OnFileSaving(object sender, FileSavingEventArgs e)
         {
             if (e.Options is PluginOptions options)
@@ -76,13 +76,11 @@ namespace StrmAssistant.Options.Store
                         options.NetworkOptions.ShowProxyServerStatus = false;
                     }
                 }
-                
+
                 var changes = PropertyChangeDetector.DetectObjectPropertyChanges(PluginOptions, options);
                 var changedProperties = new HashSet<string>(changes.Select(c => c.PropertyName));
 
-
-                // 模糊搜索
-                if (PatchManager.EnhanceChineseSearch != null)
+                if (PatchManager.GetMod<EnhanceChineseSearch>() != null)
                 {
                     var isSimpleTokenizer = string.Equals(EnhanceChineseSearch.CurrentTokenizerName, "simple",
                         StringComparison.Ordinal);
@@ -93,11 +91,9 @@ namespace StrmAssistant.Options.Store
                         ((!options.ModOptions.EnhanceChineseSearch && isSimpleTokenizer) ||
                          (options.ModOptions.EnhanceChineseSearch && !isSimpleTokenizer)))
                     {
-                        Plugin.Instance.ApplicationHost.NotifyPendingRestart();
+                        NotifyPendingRestart();
                     }
                 }
-
-                // 模糊搜索
 
                 if (changedProperties.Contains(nameof(PluginOptions.ModOptions.SearchScope)))
                 {
@@ -108,11 +104,11 @@ namespace StrmAssistant.Options.Store
                 {
                     if (options.NetworkOptions.EnableProxyServer)
                     {
-                        PatchManager.EnableProxyServer.Patch();
+                        PatchManager.GetMod<EnableProxyServer>().Patch();
                     }
                     else
                     {
-                        PatchManager.EnableProxyServer.Unpatch();
+                        PatchManager.GetMod<EnableProxyServer>().Unpatch();
                     }
                 }
 
@@ -122,11 +118,11 @@ namespace StrmAssistant.Options.Store
                     if (options.NetworkOptions.EnableProxyServer &&
                         options.NetworkOptions.ProxyServerStatus.Status == ItemStatus.Succeeded)
                     {
-                        Plugin.Instance.ApplicationHost.NotifyPendingRestart();
+                        NotifyPendingRestart();
                     }
                     else if (!options.NetworkOptions.EnableProxyServer)
                     {
-                        Plugin.Instance.ApplicationHost.NotifyPendingRestart();
+                        NotifyPendingRestart();
                     }
                 }
             }

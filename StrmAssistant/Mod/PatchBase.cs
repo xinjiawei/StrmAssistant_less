@@ -3,7 +3,13 @@ using static StrmAssistant.Mod.PatchManager;
 
 namespace StrmAssistant.Mod
 {
-    public abstract class PatchBase<T> where T : PatchBase<T>
+    public interface IMod
+    {
+        void Patch();
+        void Unpatch();
+    }
+
+    public abstract class PatchBase<T> : IMod where T : PatchBase<T>
     {
         public PatchTracker PatchTracker;
 
@@ -25,11 +31,11 @@ namespace StrmAssistant.Mod
             {
                 if (Plugin.Instance.DebugMode)
                 {
-                    Plugin.Instance.Logger.Info(e.Message);
-                    Plugin.Instance.Logger.Info(e.StackTrace);
+                    Plugin.Instance.Logger.Debug(e.Message);
+                    Plugin.Instance.Logger.Debug(e.StackTrace);
                 }
 
-                Plugin.Instance.Logger.Warn($"{PatchTracker.PatchType.Name} Init Failed");
+                Plugin.Instance.Logger.Warn($"{PatchTracker.Name} Init Failed");
                 PatchTracker.FallbackPatchApproach = PatchApproach.None;
             }
 
@@ -38,7 +44,7 @@ namespace StrmAssistant.Mod
             if (HarmonyMod is null) PatchTracker.FallbackPatchApproach = PatchApproach.Reflection;
         }
 
-        protected abstract void OnInitialize();
+        protected virtual void OnInitialize() { }
 
         protected abstract void Prepare(bool apply);
 

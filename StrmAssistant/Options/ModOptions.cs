@@ -7,7 +7,7 @@ using StrmAssistant.Properties;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Runtime.InteropServices;
+using static StrmAssistant.Options.Utility;
 
 namespace StrmAssistant.Options
 {
@@ -49,7 +49,7 @@ namespace StrmAssistant.Options
         [VisibleCondition(nameof(EnhanceChineseSearch), SimpleCondition.IsTrue)]
         public string SearchScope { get; set; } =
             string.Join(",", new[] { SearchItemType.Movie, SearchItemType.Collection, SearchItemType.Series });
-        
+
         [DisplayNameL("ModOptions_ExcludeOriginalTitle_Exclude_Original_Title", typeof(Resources))]
         [DescriptionL("ModOptions_ExcludeOriginalTitle_Exclude_original_title_from_search__Default_is_OFF_", typeof(Resources))]
         [Required]
@@ -58,8 +58,8 @@ namespace StrmAssistant.Options
 
         [Browsable(false)]
         public bool IsChineseSearchSupported =>
-            EnhanceChineseSearch || RuntimeInformation.ProcessArchitecture == Architecture.X64 &&
-            (Plugin.Instance.ApplicationHost.ApplicationVersion == new Version("4.9.1.80"));
+            EnhanceChineseSearch || Plugin.IsModSupported &&
+            (AppVer == VerTarget);
 
         public void Initialize()
         {

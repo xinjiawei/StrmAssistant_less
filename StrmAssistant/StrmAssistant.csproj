@@ -1,23 +1,61 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net6.0</TargetFrameworks>
-    <AssemblyVersion>4.9.1.80</AssemblyVersion>
-    <FileVersion>4.9.1.80</FileVersion>
+	  <Version>4.9.3.0</Version>
+	  <AssemblyVersion>$(Version)</AssemblyVersion>
+	  <FileVersion>$(Version)</FileVersion>
     <CopyLocalLockFileAssemblies>True</CopyLocalLockFileAssemblies>
-    <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
-    <LangVersion>8.0</LangVersion>
+
+	  <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+	  <EnableSourceLink>false</EnableSourceLink>
+	  <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+	  <PublishRepositoryUrl>false</PublishRepositoryUrl>
+	  <EmbedUntrackedSources>false</EmbedUntrackedSources>
+	  <ContinuousIntegrationBuild>false</ContinuousIntegrationBuild>
+	  <Deterministic>false</Deterministic>
+	  
+	<LangVersion>8.0</LangVersion>
+	  
+	  <RootNamespace>StrmAssistant</RootNamespace>
+	  <AssemblyName>StrmAssistant</AssemblyName>
+	  
   </PropertyGroup>
-  <ItemGroup>
-    <None Remove="Tokenizer\linux\libsimple.so" />
-    <None Remove="Tokenizer\win\simple.dll" />
-    <None Remove="Web\Resources\strmassistant.js" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Properties\thumb.png" />
-    <EmbeddedResource Include="Tokenizer\linux\libsimple.so" />
-    <EmbeddedResource Include="Tokenizer\win\simple.dll" />
-    <EmbeddedResource Include="Web\Resources\strmassistant.js" />
-  </ItemGroup>
+
+	<ItemGroup>
+		<None Remove="Tokenizer\win_x64\libsimple.so" />
+		<None Remove="Tokenizer\linux_x64\libsimple.so" />
+		<None Remove="Tokenizer\linux_arm64\libsimple.so" />
+		<None Remove="Tokenizer\osx_universal\libsimple.so" />
+		<None Remove="Web\Resources\strmassistant.js" />
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="Properties\thumb.png" />
+		<EmbeddedResource Include="Tokenizer\win_x64\libsimple.so" />
+		<EmbeddedResource Include="Tokenizer\linux_x64\libsimple.so" />
+		<EmbeddedResource Include="Tokenizer\linux_arm64\libsimple.so" />
+		<EmbeddedResource Include="Tokenizer\osx_universal\libsimple.so" />
+		<EmbeddedResource Include="Web\Resources\strmassistant.js" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="..\libs\publicized\Emby.Api.dll">
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="..\libs\publicized\Emby.ProcessRun.dll">
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="..\libs\publicized\Emby.Providers.dll">
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="..\libs\publicized\Emby.Sqlite.dll">
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="MediaBrowser.Controller">
+			<HintPath>"..\libs\publicized\MediaBrowser.Controller.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+	
+	
   <ItemGroup>
     <PackageReference Include="CHTCHSConv" Version="1.0.0">
     </PackageReference>
@@ -25,8 +63,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Lib.Harmony" Version="2.4.1" />
-    <PackageReference Include="mediabrowser.server.core" Version="4.9.1.80" />
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+    <PackageReference Include="mediabrowser.server.core" Version="4.9.1.90" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -36,6 +74,8 @@
     <PackageReference Include="TinyPinyin" Version="1.1.0">
     </PackageReference>
   </ItemGroup>
+	
+	
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
@@ -43,6 +83,8 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
   </ItemGroup>
+	
+	
   <ItemGroup>
     <EmbeddedResource Update="Properties\Resources.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>

@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Model.IO;
+﻿using HarmonyLib;
+using MediaBrowser.Model.IO;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -6,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -85,31 +85,9 @@ namespace StrmAssistant.Common
             return false;
         }
 
-        public static (bool isReachable, double? tcpPing) CheckProxyReachability(string host, int port)
+        public static (bool isReachable, double? httpPing) CheckProxyReachability(string scheme, string host,
+            int port, string username, string password)
         {
-            try
-            {
-                using var tcpClient = new TcpClient();
-                var stopwatch = Stopwatch.StartNew();
-                if (tcpClient.ConnectAsync(host, port).Wait(999))
-                {
-                    stopwatch.Stop();
-                    return (true, stopwatch.Elapsed.TotalMilliseconds);
-                }
-            }
-            catch
-            {
-                // ignored
-            }
-
-            return (false, null);
-        }
-
-        public static (bool isReachable, double? httpPing) CheckProxyReachability(string scheme, string host, int port,
-            string username, string password)
-        {
-            double? httpPing = null;
-
             try
             {
                 var proxyUrl = new UriBuilder(scheme, host, port).Uri;
@@ -123,27 +101,48 @@ namespace StrmAssistant.Common
                 handler.UseProxy = true;
 
                 using var client = new HttpClient(handler);
-                client.Timeout = TimeSpan.FromMilliseconds(666);
+                client.Timeout = TimeSpan.FromMilliseconds(2000);
 
                 var task1 = client.GetAsync("http://www.gstatic.com/generate_204");
                 var task2 = client.GetAsync("http://www.google.com/generate_204");
+                var task3 = client.GetAsync("http://cp.cloudflare.com/generate_204");
+
+                var allTasks = new[] { task1, task2, task3 };
 
                 var stopwatch = Stopwatch.StartNew();
-                var completedTask = Task.WhenAny(task1, task2).Result;
+                var completedTask = Task.WhenAny(allTasks).GetAwaiter().GetResult();
                 stopwatch.Stop();
 
-                if (completedTask.Status == TaskStatus.RanToCompletion && completedTask.Result.IsSuccessStatusCode &&
-                    completedTask.Result.StatusCode == HttpStatusCode.NoContent)
+                try
                 {
-                    httpPing = stopwatch.Elapsed.TotalMilliseconds;
-                }
-                else
-                {
-                    var otherTask = completedTask == task1 ? task2 : task1;
-                    if (otherTask.Status == TaskStatus.RanToCompletion && otherTask.Result.IsSuccessStatusCode &&
-                        otherTask.Result.StatusCode == HttpStatusCode.NoContent)
+                    var response = completedTask.GetAwaiter().GetResult();
+                    if (response.IsSuccessStatusCode && response.StatusCode == HttpStatusCode.NoContent)
                     {
-                        httpPing = stopwatch.Elapsed.TotalMilliseconds;
+                        var httpPing = stopwatch.Elapsed.TotalMilliseconds;
+                        return (true, httpPing);
+                    }
+                }
+                catch
+                {
+                    // ignored
+                }
+
+                foreach (var task in allTasks)
+                {
+                    if (task == completedTask) continue;
+
+                    try
+                    {
+                        var response = task.GetAwaiter().GetResult();
+                        if (response.IsSuccessStatusCode && response.StatusCode == HttpStatusCode.NoContent)
+                        {
+                            var httpPing = stopwatch.Elapsed.TotalMilliseconds;
+                            return (true, httpPing);
+                        }
+                    }
+                    catch
+                    {
+                        // ignored
                     }
                 }
             }
@@ -152,7 +151,7 @@ namespace StrmAssistant.Common
                 // ignored
             }
 
-            return (httpPing.HasValue, httpPing);
+            return (false, null);
         }
 
         public static string GenerateFixedCode(string input, string prefix, int length)
@@ -229,26 +228,33 @@ namespace StrmAssistant.Common
 
         public static double LevenshteinDistance(string str1, string str2)
         {
-            int n = str1.Length;
-            int m = str2.Length;
-            int[,] d = new int[n + 1, m + 1];
+            var n = str1.Length;
+            var m = str2.Length;
+            var d = new int[n + 1, m + 1];
 
-            for (int i = 0; i <= n; d[i, 0] = i++) ;
-            for (int j = 0; j <= m; d[0, j] = j++) ;
+            for (var i = 0; i <= n; d[i, 0] = i++) ;
+            for (var j = 0; j <= m; d[0, j] = j++) ;
 
-            for (int i = 1; i <= n; i++)
+            for (var i = 1; i <= n; i++)
             {
-                for (int j = 1; j <= m; j++)
+                for (var j = 1; j <= m; j++)
                 {
-                    int cost = (str1[i - 1] == str2[j - 1]) ? 0 : 1;
+                    var cost = (str1[i - 1] == str2[j - 1]) ? 0 : 1;
                     d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + cost);
                 }
             }
 
-            int levenshteinDistance = d[n, m];
-            double similarity = 1.0 - (levenshteinDistance / (double)Math.Max(str1.Length, str2.Length));
+            var levenshteinDistance = d[n, m];
+            var similarity = 1.0 - levenshteinDistance / (double)Math.Max(str1.Length, str2.Length);
 
             return similarity;
+        }
+
+        public static void NotifyPendingRestart()
+        {
+            var applicationHost = Plugin.Instance.ApplicationHost;
+            Traverse.Create(applicationHost).Field("<HasPendingRestart>k__BackingField").SetValue(false);
+            applicationHost.NotifyPendingRestart();
         }
     }
 }

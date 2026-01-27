@@ -40,10 +40,10 @@ namespace StrmAssistant.Options
         public AboutOptions AboutOptions { get; set; } = new AboutOptions();
 
         [Browsable(false)]
-        public bool IsModSuccess => PatchManager.IsModSuccess();
+        public static bool IsModSuccess => PatchManager.IsModSuccess();
 
         [Browsable(false)]
-        public bool ShowConflictPluginLoadedStatus =>
+        public static bool ShowConflictPluginLoadedStatus =>
             AppDomain.CurrentDomain.GetAssemblies()
                 .Select(a => a.GetName().Name)
                 .Any(n => n == "StrmExtract" || n == "InfuseSync");

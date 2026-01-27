@@ -8,7 +8,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using static StrmAssistant.Common.CommonUtility;
 
-namespace StrmAssistant
+namespace StrmAssistant.Options
 {
     public class NetworkOptions : EditableOptionsBase
     {

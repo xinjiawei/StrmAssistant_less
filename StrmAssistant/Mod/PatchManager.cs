@@ -10,23 +10,16 @@ namespace StrmAssistant.Mod
 {
     public static class PatchManager
     {
-        public static Harmony HarmonyMod;
+        public static readonly Harmony HarmonyMod;
         public static readonly List<PatchTracker> PatchTrackerList = new List<PatchTracker>();
+        public static readonly Dictionary<Type, IMod> ModMap = new Dictionary<Type, IMod>();
 
-        ////public static EnableImageCapture EnableImageCapture;
-
-        // Ä£ºýËÑË÷
-        public static EnhanceChineseSearch EnhanceChineseSearch;
-        // Ä£ºýËÑË÷
-        public static EnableProxyServer EnableProxyServer;
-
-
-        private static readonly ConcurrentDictionary<Tuple<Type, string>, HarmonyMethod> HarmonyMethodCache 
+        private static readonly ConcurrentDictionary<Tuple<Type, string>, HarmonyMethod> HarmonyMethodCache
             = new ConcurrentDictionary<Tuple<Type, string>, HarmonyMethod>();
-        private static readonly ConcurrentDictionary<Tuple<Type, string>, MethodInfo> MethodInfoCache 
+        private static readonly ConcurrentDictionary<Tuple<Type, string>, MethodInfo> MethodInfoCache
             = new ConcurrentDictionary<Tuple<Type, string>, MethodInfo>();
 
-        public static void Initialize()
+        static PatchManager()
         {
             try
             {
@@ -36,29 +29,28 @@ namespace StrmAssistant.Mod
             {
                 if (Plugin.Instance.DebugMode)
                 {
-                    Plugin.Instance.Logger.Info("Harmony Init Failed");
-                    Plugin.Instance.Logger.Info(e.Message);
-                    Plugin.Instance.Logger.Info(e.StackTrace);
+                    Plugin.Instance.Logger.Debug("Harmony Init Failed");
+                    Plugin.Instance.Logger.Debug(e.Message);
+                    Plugin.Instance.Logger.Debug(e.StackTrace);
                 }
             }
-
-            // Ä£ºýËÑË÷
-            EnhanceChineseSearch = new EnhanceChineseSearch();
-            // Ä£ºýËÑË÷
-            EnableProxyServer = new EnableProxyServer();
-
         }
 
-        public static bool IsPatched(MethodBase methodInfo, Type type)
+        public static void Initialize()
         {
-            var patchedMethods = Harmony.GetAllPatchedMethods();
-            if (!patchedMethods.Contains(methodInfo)) return false;
-            var patchInfo = Harmony.GetPatchInfo(methodInfo);
+            ModMap[typeof(EnhanceChineseSearch)] = new EnhanceChineseSearch();
+            ModMap[typeof(EnableProxyServer)] = new EnableProxyServer();
+        }
 
-            return patchInfo.Prefixes.Any(p => p.owner == HarmonyMod.Id && p.PatchMethod.DeclaringType == type) ||
-                   patchInfo.Postfixes.Any(p => p.owner == HarmonyMod.Id && p.PatchMethod.DeclaringType == type) ||
-                   patchInfo.Transpilers.Any(p => p.owner == HarmonyMod.Id && p.PatchMethod.DeclaringType == type) ||
-                   patchInfo.Finalizers.Any(p => p.owner == HarmonyMod.Id && p.PatchMethod.DeclaringType == type);
+        public static T GetMod<T>() where T : class, IMod
+        {
+            return ModMap.TryGetValue(typeof(T), out var mod) ? mod as T : null;
+        }
+
+        public static Assembly GetAssemblyByName(string name)
+        {
+            return AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => string.Equals(a.GetName().Name, name, StringComparison.OrdinalIgnoreCase));
         }
 
         public static bool WasCalledByMethod(Assembly assembly, string callingMethodName)
@@ -90,7 +82,7 @@ namespace StrmAssistant.Mod
 
             if (targetMethod is null)
             {
-                Plugin.Instance.Logger.Warn($"{tracker.PatchType.Name} Init Failed");
+                Plugin.Instance.Logger.Warn($"{tracker.Name} Init Failed");
                 tracker.FallbackPatchApproach = PatchApproach.None;
                 return false;
             }
@@ -105,8 +97,8 @@ namespace StrmAssistant.Mod
 
                     if (Plugin.Instance.DebugMode)
                     {
-                        Plugin.Instance.Logger.Info(
-                            $"{nameof(ReversePatch)} {(targetMethod.DeclaringType != null ? targetMethod.DeclaringType.Name + "." : string.Empty)}{targetMethod.Name} for {tracker.PatchType.Name} Success");
+                        Plugin.Instance.Logger.Debug(
+                            $"{nameof(ReversePatch)} {(targetMethod.DeclaringType != null ? targetMethod.DeclaringType.Name + "." : string.Empty)}{targetMethod.Name} for {tracker.Name} Success");
                     }
 
                     return true;
@@ -115,15 +107,15 @@ namespace StrmAssistant.Mod
                 {
                     if (Plugin.Instance.DebugMode)
                     {
-                        Plugin.Instance.Logger.Info(
-                            $"{nameof(ReversePatch)} {targetMethod.Name} for {tracker.PatchType.Name} Failed");
-                        Plugin.Instance.Logger.Info(he.Message);
-                        Plugin.Instance.Logger.Info(he.StackTrace);
+                        Plugin.Instance.Logger.Debug(
+                            $"{nameof(ReversePatch)} {targetMethod.Name} for {tracker.Name} Failed");
+                        Plugin.Instance.Logger.Debug(he.Message);
+                        Plugin.Instance.Logger.Debug(he.StackTrace);
                     }
 
                     tracker.FallbackPatchApproach = PatchApproach.Reflection;
 
-                    Plugin.Instance.Logger.Warn($"{tracker.PatchType.Name} Init Failed");
+                    Plugin.Instance.Logger.Warn($"{tracker.Name} Init Failed");
                 }
             }
 
@@ -137,7 +129,7 @@ namespace StrmAssistant.Mod
 
             if (targetMethod is null)
             {
-                Plugin.Instance.Logger.Warn($"{tracker.PatchType.Name} Init Failed");
+                Plugin.Instance.Logger.Warn($"{tracker.Name} Init Failed");
                 tracker.FallbackPatchApproach = PatchApproach.None;
                 return false;
             }
@@ -173,7 +165,7 @@ namespace StrmAssistant.Mod
                     if (Plugin.Instance.DebugMode)
                     {
                         Plugin.Instance.Logger.Debug(
-                            $"{action} 1206 {(targetMethod.DeclaringType != null ? targetMethod.DeclaringType.Name + "." : string.Empty)}{targetMethod.Name} for {tracker.PatchType.Name} Success");
+                            $"{action} {(targetMethod.DeclaringType != null ? targetMethod.DeclaringType.Name + "." : string.Empty)}{targetMethod.Name} for {tracker.Name} Success");
                     }
                 }
 
@@ -183,9 +175,9 @@ namespace StrmAssistant.Mod
             {
                 if (Plugin.Instance.DebugMode)
                 {
-                    Plugin.Instance.Logger.Info($"{action} {targetMethod.Name} for {tracker.PatchType.Name} Failed");
-                    Plugin.Instance.Logger.Info(he.Message);
-                    Plugin.Instance.Logger.Info(he.StackTrace);
+                    Plugin.Instance.Logger.Debug($"{action} {targetMethod.Name} for {tracker.Name} Failed");
+                    Plugin.Instance.Logger.Debug(he.Message);
+                    Plugin.Instance.Logger.Debug(he.StackTrace);
                 }
 
                 tracker.FallbackPatchApproach = PatchApproach.Reflection;
@@ -202,7 +194,6 @@ namespace StrmAssistant.Mod
             {
                 if (usageCount == 0)
                 {
-                    Plugin.Instance.Logger.Debug("Debug PatchUnpatch 02");
                     if (PatchUnpatch(tracker, true, targetMethod, prefix, postfix, transpiler, finalizer, suppress))
                     {
                         usageCount++;
@@ -223,12 +214,23 @@ namespace StrmAssistant.Mod
 
                 if (usageCount == 0)
                 {
-                    Plugin.Instance.Logger.Debug("Debug PatchUnpatch 03");
                     return PatchUnpatch(tracker, false, targetMethod, prefix, postfix, transpiler, finalizer, suppress);
                 }
             }
 
             return true;
+        }
+
+        public static bool IsPatched(MethodBase methodInfo, Type type)
+        {
+            var patchedMethods = Harmony.GetAllPatchedMethods();
+            if (!patchedMethods.Contains(methodInfo)) return false;
+            var patchInfo = Harmony.GetPatchInfo(methodInfo);
+
+            return patchInfo.Prefixes.Any(p => p.owner == HarmonyMod.Id && p.PatchMethod.DeclaringType == type) ||
+                   patchInfo.Postfixes.Any(p => p.owner == HarmonyMod.Id && p.PatchMethod.DeclaringType == type) ||
+                   patchInfo.Transpilers.Any(p => p.owner == HarmonyMod.Id && p.PatchMethod.DeclaringType == type) ||
+                   patchInfo.Finalizers.Any(p => p.owner == HarmonyMod.Id && p.PatchMethod.DeclaringType == type);
         }
 
         private static HarmonyMethod GetHarmonyMethod(Type patchType, string patchMethod)

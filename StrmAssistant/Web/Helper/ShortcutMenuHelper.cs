@@ -1,47 +1,59 @@
-﻿using MediaBrowser.Controller.Configuration;
+﻿using HarmonyLib;
+using StrmAssistant.Mod;
 using System;
 using System.IO;
-using System.Linq;
 using System.Reflection;
+using System.Text;
 
 namespace StrmAssistant.Web.Helper
 {
     internal static class ShortcutMenuHelper
     {
-        public static string ModifiedShortcutsString { get; private set; }
+        private static readonly PatchTracker PatchTracker =
+            new PatchTracker(typeof(ShortcutMenuHelper), PatchApproach.Injection, "ShortcutMenuHelper");
 
-        public static MemoryStream StrmAssistantJs { get; private set; }
+        public static ReadOnlyMemory<byte> ModifiedShortcutsBytes { get; private set; }
+        public static ReadOnlyMemory<byte> StrmAssistantJsBytes { get; private set; }
 
-        public static void Initialize(IServerConfigurationManager configurationManager)
+        public static void Initialize()
         {
             try
             {
-                StrmAssistantJs = GetResourceStream("strmassistant.js");
-                ModifyShortcutMenu(configurationManager);
+                StrmAssistantJsBytes = GetResourceBytes("strmassistant.js");
+                var configurationManager = Plugin.Instance.ConfigurationManager;
+                var dashboardSourcePath = configurationManager.Configuration.DashboardSourcePath ??
+                                          Path.Combine(configurationManager.ApplicationPaths.ApplicationResourcesPath,
+                                              "dashboard-ui");
+                ModifyShortcutMenu(dashboardSourcePath);
             }
             catch (Exception e)
             {
-                Plugin.Instance.Logger.Error($"{nameof(ShortcutMenuHelper)} Init Failed");
+                Plugin.Instance.Logger.Error($"{PatchTracker.Name} Init Failed");
                 Plugin.Instance.Logger.Error(e.Message);
-                Plugin.Instance.Logger.Info(e.StackTrace);
+                Plugin.Instance.Logger.Debug(e.StackTrace);
             }
         }
 
-        private static MemoryStream GetResourceStream(string resourceName)
+        private static ReadOnlyMemory<byte> GetResourceBytes(string resourceName)
         {
             var name = typeof(Plugin).Namespace + ".Web.Resources." + resourceName;
-            var manifestResourceStream = typeof (ShortcutMenuHelper).GetTypeInfo().Assembly.GetManifestResourceStream(name);
-            var destination = new MemoryStream((int) manifestResourceStream.Length);
-            manifestResourceStream.CopyTo((Stream) destination);
-            return destination;
+            using var stream = typeof(ShortcutMenuHelper).GetTypeInfo().Assembly.GetManifestResourceStream(name) ??
+                               throw new InvalidOperationException($"Resource not found: {name}");
+
+            var length = (int)stream.Length;
+            var buffer = new byte[length];
+
+            var bytesRead = stream.Read(buffer, 0, length);
+            if (bytesRead != length)
+            {
+                throw new EndOfStreamException($"Could not read entire resource: {name}");
+            }
+
+            return new ReadOnlyMemory<byte>(buffer);
         }
 
-        private static void ModifyShortcutMenu(IServerConfigurationManager configurationManager)
+        private static void ModifyShortcutMenu(string dashboardSourcePath)
         {
-            var dashboardSourcePath = configurationManager.Configuration.DashboardSourcePath ??
-                                      Path.Combine(configurationManager.ApplicationPaths.ApplicationResourcesPath,
-                                          "dashboard-ui");
-
             const string injectShortcutCommand = @"
 const strmAssistantCommandSource = {
     getCommands: function(options) {
@@ -57,6 +69,8 @@ const strmAssistantCommandSource = {
             'zh-hk': '\u89E3\u9396',
             'zh-tw': '\u89E3\u9396'
         }[locale] || 'Unlock') + (cjk ? this.globalize.translate('Metadata') : ' ' + this.globalize.translate('Metadata'));
+        const clearIntroCommandName = locale === 'zh-cn' ? '\u6E05\u9664\u7247\u5934\u6807\u8BB0' : 
+            (['zh-hk', 'zh-tw'].includes(locale) ? '\u6E05\u9664\u7247\u982D\u6A19\u8A18' : 'Clear Intro Markers');
 
         if (options.items?.length === 1 && options.items[0].LibraryOptions && options.items[0].Type === 'VirtualFolder' &&
             options.items[0].CollectionType !== 'boxsets' && options.items[0].CollectionType !== 'playlists') {
@@ -84,17 +98,12 @@ const strmAssistantCommandSource = {
             }
             if (options.items[0].hasOwnProperty('LockData') && options.items[0].Type !== 'CollectionFolder' &&
                 (options.user && options.user.Policy.IsAdministrator || false)) {
-                if (options.items[0].LockData) {
-                    result.push({ name: unlockCommandName, id: 'unlock', icon: 'lock_open' });
-                } else {
-                    result.push({ name: lockCommandName, id: 'lock', icon: 'lock' });
-                }
+                result.push({ name: lockCommandName, id: 'lock', icon: 'lock' });
+                result.push({ name: unlockCommandName, id: 'unlock', icon: 'lock_open' });
             }
             if ((options.items[0].Type === 'Series' || options.items[0].Type === 'Season') &&
                 (options.user && options.user.Policy.IsAdministrator || false)) {
-                const commandName = locale === 'zh-cn' ? '\u6E05\u9664\u7247\u5934\u6807\u8BB0' : 
-                    (['zh-hk', 'zh-tw'].includes(locale) ? '\u6E05\u9664\u7247\u982D\u6A19\u8A18' : 'Clear Intro Markers');
-                result.push({ name: commandName, id: 'clear_intro', icon: 'clear_all' });
+                result.push({ name: clearIntroCommandName, id: 'clear_intro', icon: 'clear_all' });
             }
             return result;
         }
@@ -103,11 +112,14 @@ const strmAssistantCommandSource = {
             const result = [];
             result.push({ name: lockCommandName, id: 'lock', icon: 'lock' });
             result.push({ name: unlockCommandName, id: 'unlock', icon: 'lock_open' });
+            if (options.items[0].Type === 'Series' || options.items[0].Type === 'Season') {
+                result.push({ name: clearIntroCommandName, id: 'clear_intro', icon: 'clear_all' });
+            }
             return result;
         }
         return [];
     },
-    executeCommand: function(command, items) {
+    executeCommand: function(command, items, options) {
         if (!command || !items?.length) return;
         const actions = {
             copy: 'copy',
@@ -136,6 +148,26 @@ const strmAssistantCommandSource = {
                 return Promise.all(promises);
             });
         }
+        if (command === actions.clear_intro) {
+            return require(['components/strmassistant/strmassistant']).then(responses => {
+                const locale = this.globalize.getCurrentLocale().toLowerCase();
+                const commandName = locale === 'zh-cn' ? '\u6E05\u9664\u7247\u5934\u6807\u8BB0' : 
+                        (['zh-hk', 'zh-tw'].includes(locale) ? '\u6E05\u9664\u7247\u982D\u6A19\u8A18' : 'Clear Intro Markers');
+                this.confirm({
+                    text: this.globalize.translate('AreYouSureToContinue'),
+                    title: commandName,
+                    confirmText: this.globalize.translate('Clear'),
+                    primary: 'cancel'
+                }).then(() => {
+                    const promises = items.map(item => responses[0].clear_intro(item.Id));
+                    return Promise.all(promises);
+                }).then(() => {
+                    const confirmMessage = (locale === 'zh-cn') ? commandName + '\u6210\u529F' : 
+                        (['zh-hk', 'zh-tw'].includes(locale) ? commandName + '\u6210\u529F' : commandName + ' Success');
+                    this.toast(confirmMessage);
+                });
+            });
+        }
         if (actions[command]) {
             return require(['components/strmassistant/strmassistant']).then(responses => {
                 if (command === 'traverse') {
@@ -148,35 +180,33 @@ const strmAssistantCommandSource = {
 };
 
 setTimeout(() => {
-    Emby.importModule('./modules/common/globalize.js').then(globalize => {
+    Promise.all([
+        Emby.importModule('./modules/common/globalize.js'),
+        Emby.importModule('./modules/common/dialogs/confirm.js'),
+        Emby.importModule('./modules/toast/toast.js'),
+        Emby.importModule('./modules/common/itemmanager/itemmanager.js')
+    ]).then(([globalize, confirm, toast, itemmanager]) => {
         strmAssistantCommandSource.globalize = globalize;
-        Emby.importModule('./modules/common/itemmanager/itemmanager.js').then(itemmanager => {
-            itemmanager.registerCommandSource(strmAssistantCommandSource);
-        });
+        strmAssistantCommandSource.confirm = confirm;
+        strmAssistantCommandSource.toast = toast;
+        itemmanager.registerCommandSource(strmAssistantCommandSource);
     });
 }, 3000);
     ";
-            var dataExplorer2Assembly = AppDomain.CurrentDomain.GetAssemblies()
-                .FirstOrDefault(a => a.GetName().Name == "Emby.DataExplorer2");
+            var modifiedShortcutsString =
+                File.ReadAllText(Path.Combine(dashboardSourcePath, "modules", "shortcuts.js")) + injectShortcutCommand;
+            ModifiedShortcutsBytes = new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(modifiedShortcutsString));
 
-            ModifiedShortcutsString = File.ReadAllText(Path.Combine(dashboardSourcePath, "modules", "shortcuts.js")) +
-                                      injectShortcutCommand;
+            var contextMenuHelperType = AccessTools.TypeByName("Emby.DataExplorer2.Api.ContextMenuHelper");
 
-            if (dataExplorer2Assembly != null)
+            if (contextMenuHelperType is null) return;
+
+            if (Plugin.Instance.DebugMode)
             {
-                if (Plugin.Instance.DebugMode)
-                {
-                    Plugin.Instance.Logger.Info($"{nameof(ShortcutMenuHelper)} - Emby.DataExplorer2 plugin is installed");
-                }
+                Plugin.Instance.Logger.Debug($"{nameof(ShortcutMenuHelper)} - Emby.DataExplorer2 plugin is installed");
+            }
 
-                var contextMenuHelperType = dataExplorer2Assembly.GetType("Emby.DataExplorer2.Api.ContextMenuHelper");
-                var modifiedShortcutsProperty = contextMenuHelperType?.GetProperty("ModifiedShortcutsString",
-                    BindingFlags.Static | BindingFlags.Public);
-                var setMethod = modifiedShortcutsProperty?.GetSetMethod(true);
-
-                if (setMethod != null)
-                {
-                    const string injectDataExplorerCommand = @"
+            const string injectDataExplorerCommand = @"
 const dataExplorerCommandSource = {
     getCommands(options) {
         const commands = [];
@@ -189,7 +219,7 @@ const dataExplorerCommandSource = {
         }
         return commands;
     },
-    executeCommand(command, items) {
+    executeCommand(command, items, options) {
         return require(['components/dataexplorer/dataexplorer']).then((responses) => {
             return responses[0].show(items[0].Id);
         });
@@ -202,10 +232,9 @@ setTimeout(() => {
     });
 }, 5000);
 ";
-                    ModifiedShortcutsString += injectDataExplorerCommand;
-                    setMethod.Invoke(null, new object[] { ModifiedShortcutsString });
-                }
-            }
+            modifiedShortcutsString += injectDataExplorerCommand;
+            Traverse.Create(contextMenuHelperType).Property("ModifiedShortcutsString")
+                .SetValue(modifiedShortcutsString);
         }
     }
 }
