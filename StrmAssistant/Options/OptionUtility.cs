@@ -43,7 +43,7 @@ namespace StrmAssistant.Options
         };
 
         public static readonly Version AppVer = Plugin.Instance.ApplicationHost.ApplicationVersion;
-        public static readonly Version VerTarget = new Version("4.9.3.0");
+        public static readonly Version VerTarget = new Version("4.10.0.40");
 
         public static void InitializeOptionCache()
         {

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -21,18 +22,17 @@ namespace StrmAssistant.Mod
         private static readonly Version AppVer = Plugin.Instance.ApplicationHost.ApplicationVersion;
         private static readonly Version Ver4830 = new Version("4.8.3.0");
         private static readonly Version Ver4900 = new Version("4.9.0.0");
-        private static readonly Version Ver4937 = new Version("4.9.0.37");
         private static readonly string StockTokenizerName = "unicode61 remove_diacritics 2";
         private static readonly string SimpleTokenizerName = "simple";
         private static readonly string FtsTableName = AppVer >= Ver4830 ? "fts_search9" : "fts_search8";
 
         public static string CurrentTokenizerName { get; private set; } = "unknown";
 
-        private static readonly string TokenizerPath =
-            Path.Combine(Plugin.Instance.ApplicationPaths.PluginsPath, "libsimple.so");
+        private static readonly string TokenizerPath = ResolveTokenizerPath();
         private static readonly object _lock = new object();
+        private static readonly object _tokenizerStateLock = new object();
+        private static readonly HashSet<int> _tokenizerLoadedConnections = new HashSet<int>();
         private static bool _patchPhase2Initialized;
-        private static bool _searchPatchCompleted;
 
         private static readonly Dictionary<string, Regex> ProviderPatterns = new Dictionary<string, Regex>
         {
@@ -187,13 +187,21 @@ namespace StrmAssistant.Mod
             // No action needed
         }
 
-        [HarmonyPrefix]
-        private static void CreateNewConnectionPrefix(ref bool isReadOnly)
+        private static string ResolveTokenizerPath()
         {
-            if (isReadOnly)
+            var basePath = Plugin.Instance.ApplicationPaths.PluginsPath;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                isReadOnly = false;
+                return Path.Combine(basePath, "simple.dll");
             }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return Path.Combine(basePath, "libsimple.dylib");
+            }
+
+            return Path.Combine(basePath, "libsimple");
         }
 
         private static bool CreateConnectionPostfixPlatform()
@@ -204,7 +212,6 @@ namespace StrmAssistant.Mod
                     Instance.PatchTracker,
                     true,
                     _createConnection,
-                    prefix: nameof(CreateNewConnectionPrefix),
                     postfix: nameof(CreateConnectionPostfixWin)
                     );
             }
@@ -217,7 +224,6 @@ namespace StrmAssistant.Mod
                         Instance.PatchTracker,
                         true,
                         _createConnection,
-                        prefix: nameof(CreateNewConnectionPrefix),
                         postfix: RuntimeInformation.ProcessArchitecture == Architecture.Arm64
                             ? nameof(CreateConnectionPostfixLinuxArm64)
                             : nameof(CreateConnectionPostfixLinux)
@@ -230,7 +236,6 @@ namespace StrmAssistant.Mod
                     Instance.PatchTracker,
                     true,
                     _createConnection,
-                    prefix: nameof(CreateNewConnectionPrefix),
                     postfix: nameof(CreateConnectionPostfixOsx)
                     );
             }
@@ -352,7 +357,8 @@ namespace StrmAssistant.Mod
             else
             {
                 populateQuery =
-                    $"insert into {FtsTableName}(RowId, Name, OriginalTitle, SeriesName, Album) select id, " +
+                    $"insert into {FtsTableName}(RowId, ItemId, Name, OriginalTitle, SeriesName, Album) select id, " +
+                    "cast(id as text), " +
                     GetSearchColumnNormalization("Name") + ", " +
                     GetSearchColumnNormalization("OriginalTitle") + ", " +
                     GetSearchColumnNormalization("SeriesName") + ", " +
@@ -367,9 +373,11 @@ namespace StrmAssistant.Mod
                 var dropFtsTableQuery = $"DROP TABLE IF EXISTS {FtsTableName}";
                 connection.Execute(dropFtsTableQuery);
 
-                var prefix = string.Equals(tokenizerName, SimpleTokenizerName) ? "" : ", prefix='1 2 3 4'";
+                var columns = AppVer < Ver4900
+                    ? "Name, OriginalTitle, SeriesName, Album"
+                    : "ItemId, Name, OriginalTitle, SeriesName, Album";
                 var createFtsTableQuery =
-                    $"CREATE VIRTUAL TABLE IF NOT EXISTS {FtsTableName} USING FTS5 (Name, OriginalTitle, SeriesName, Album, tokenize=\"{tokenizerName}\"{prefix})";
+                    $"CREATE VIRTUAL TABLE IF NOT EXISTS {FtsTableName} USING FTS5 ({columns}, tokenize=\"{tokenizerName}\", prefix='1 2 3 4')";
                 connection.Execute(createFtsTableQuery);
 
                 Plugin.Instance.Logger.Info($"EnhanceChineseSearch - Filling {FtsTableName} Start");
@@ -395,7 +403,16 @@ namespace StrmAssistant.Mod
 
         private static string GetSearchColumnNormalization(string columnName)
         {
-            return "replace(replace(" + columnName + ",'''',''),'.','')";
+            return "replace(replace(replace(replace(" + columnName + ",'''',''),'.',''),'·',''),'-','')";
+        }
+
+        private static string NormalizeSearchTerm(string searchTerm)
+        {
+            return searchTerm?
+                .Replace(".", string.Empty)
+                .Replace("'", string.Empty)
+                .Replace("·", string.Empty)
+                .Replace("-", string.Empty);
         }
 
         private static bool EnsureTokenizerExists()
@@ -403,7 +420,12 @@ namespace StrmAssistant.Mod
             var resourceName = GetTokenizerResourceName();
             var expectedSha1 = GetExpectedSha1();
 
-            if (resourceName == null || expectedSha1 == null) return false;
+            if (string.IsNullOrWhiteSpace(TokenizerPath) ||
+                string.IsNullOrWhiteSpace(resourceName) ||
+                string.IsNullOrWhiteSpace(expectedSha1))
+            {
+                return false;
+            }
 
             try
             {
@@ -411,35 +433,20 @@ namespace StrmAssistant.Mod
                 {
                     var existingSha1 = ComputeSha1(TokenizerPath);
 
-                    if (expectedSha1.ContainsValue(existingSha1))
+                    if (string.Equals(existingSha1, expectedSha1, StringComparison.OrdinalIgnoreCase))
                     {
-                        var highestVersion = expectedSha1.Keys.Max();
-                        var highestSha1 = expectedSha1[highestVersion];
-
-                        if (existingSha1 == highestSha1)
-                        {
-                            Plugin.Instance.Logger.Info(
-                                $"EnhanceChineseSearch - Tokenizer exists with matching SHA-1 for the highest version {highestVersion}");
-                            return true;
-                        }
-
-                        var currentVersion = expectedSha1.FirstOrDefault(x => x.Value == existingSha1).Key;
-                        Plugin.Instance.Logger.Info(
-                            $"EnhanceChineseSearch - Tokenizer exists for version {currentVersion} but does not match the highest version {highestVersion}. Upgrading...");
+                        return true;
                     }
-                    else
-                    {
-                        Plugin.Instance.Logger.Info(
-                            "EnhanceChineseSearch - Tokenizer exists but SHA-1 is not recognized. Overwriting...");
-                    }
+
+                    Plugin.Instance.Logger.Info(
+                        "EnhanceChineseSearch - Tokenizer exists but does not match the bundled version. Overwriting...");
                 }
                 else
                 {
                     Plugin.Instance.Logger.Info("EnhanceChineseSearch - Tokenizer does not exist. Exporting...");
                 }
 
-                ExportTokenizer(resourceName);
-                return true;
+                return ExportTokenizer(resourceName);
             }
             catch (Exception e)
             {
@@ -455,7 +462,7 @@ namespace StrmAssistant.Mod
             return false;
         }
 
-        private static void ExportTokenizer(string resourceName)
+        private static bool ExportTokenizer(string resourceName)
         {
             try
             {
@@ -466,6 +473,10 @@ namespace StrmAssistant.Mod
                 }
 
                 using var resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName);
+                if (resourceStream == null)
+                {
+                    throw new InvalidOperationException("Tokenizer resource not found: " + resourceName);
+                }
                 using var fileStream = new FileStream(TokenizerPath, FileMode.Create, FileAccess.Write);
                 resourceStream.CopyTo(fileStream);
 
@@ -492,75 +503,69 @@ namespace StrmAssistant.Mod
                     }
                     catch { }
                 }
+
+                return true;
             }
-            catch { }
+            catch
+            {
+                return false;
+            }
         }
 
         private static string GetTokenizerResourceName()
         {
-            if (!Environment.Is64BitOperatingSystem) return null;
-
-            var tokenizerNamespace = Assembly.GetExecutingAssembly().GetName().Name + ".Tokenizer";
-            string platformPart = null;
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && Environment.Is64BitProcess)
-            {
-                platformPart = "win_x64";
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                if (RuntimeInformation.ProcessArchitecture == Architecture.X64)
-                {
-                    platformPart = "linux_x64";
-                }
-                else if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
-                {
-                    platformPart = "linux_arm64";
-                }
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                platformPart = "osx_universal";
-            }
-
-            if (platformPart == null) return null;
-            return $"{tokenizerNamespace}.{platformPart}.libsimple.so";
-        }
-
-        private static Dictionary<Version, string> GetExpectedSha1()
-        {
-            if (!Environment.Is64BitOperatingSystem) return null;
+            var tokenizerNamespace = Assembly.GetExecutingAssembly().GetName().Name + ".Resources.Tokenizer";
+            var architecture = RuntimeInformation.OSArchitecture;
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                return new Dictionary<Version, string>
+                if (architecture == Architecture.X64) return $"{tokenizerNamespace}.win.x64.simple.dll";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                if (architecture == Architecture.X64) return $"{tokenizerNamespace}.mac.x64.libsimple.dylib";
+                if (architecture == Architecture.Arm64) return $"{tokenizerNamespace}.mac.arm64.libsimple.dylib";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                if (architecture == Architecture.X64) return $"{tokenizerNamespace}.linux.x64.libsimple.so";
+                if (architecture == Architecture.Arm64) return $"{tokenizerNamespace}.linux.arm64.libsimple.so";
+            }
+
+            return null;
+        }
+
+        private static string GetExpectedSha1()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                if (RuntimeInformation.OSArchitecture == Architecture.X64)
                 {
-                    { new Version(0, 5, 2), "e99315d7005c6b04b55a5f71e45eb3aac41670ba" }
-                };
+                    return "338bb0915d6f4625b54f041bdeb6791b6e590c4e";
+                }
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 if (RuntimeInformation.ProcessArchitecture == Architecture.X64)
                 {
-                    return new Dictionary<Version, string>
-                    {
-                        { new Version(0, 5, 2), "b1650dd9348e7242a2908eee1f998d510564d4e7" }
-                    };
+                    return "a6188af48c0fef201cb24dbebc65c4cf5b4ddf9b";
                 }
                 else if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
                 {
-                    return new Dictionary<Version, string>
-                    {
-                        { new Version(0, 5, 2), "acb77b9ea2b823a1a4d8383ce501271cfb27ba19" }
-                    };
+                    return "acb77b9ea2b823a1a4d8383ce501271cfb27ba19";
                 }
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                return new Dictionary<Version, string>
+                if (RuntimeInformation.OSArchitecture == Architecture.X64)
                 {
-                    { new Version(0, 5, 2), "20a299e89ecf02dd75d2835c922c53c6cca133d8" }
-                };
+                    return "cb54822a0e3fbc535d9e385bfc83ecabdf81217f";
+                }
+
+                if (RuntimeInformation.OSArchitecture == Architecture.Arm64)
+                {
+                    return "b7216c7240bf748822a3556e1ca20aef133e1252";
+                }
             }
 
             return null;
@@ -601,16 +606,30 @@ namespace StrmAssistant.Mod
                 patchedCacheIds = PatchUnpatch(Instance.PatchTracker, true, _cacheIdsFromTextParams, prefix: nameof(CacheIdsFromTextParamsPrefix));
             }
 
-            bool result = patchedJoinCommand && patchedSearchTerm && patchedCacheIds;
-            if (result)
-            {
-                _searchPatchCompleted = true;
-            }
-            return result;
+            return patchedJoinCommand && patchedSearchTerm && patchedCacheIds;
         }
 
         private static bool LoadTokenizerExtension(IDatabaseConnection connection)
         {
+            return LoadTokenizerExtension(connection, true);
+        }
+
+        private static bool LoadTokenizerExtension(IDatabaseConnection connection, bool logErrors)
+        {
+            if (connection == null)
+            {
+                return false;
+            }
+
+            var connectionKey = RuntimeHelpers.GetHashCode(connection);
+            lock (_tokenizerStateLock)
+            {
+                if (_tokenizerLoadedConnections.Contains(connectionKey))
+                {
+                    return true;
+                }
+            }
+
             try
             {
                 if (!File.Exists(TokenizerPath) || _sqlite3_enable_load_extension == null || _sqlite3_db == null)
@@ -628,10 +647,17 @@ namespace StrmAssistant.Mod
                 var escapedPath = TokenizerPath.Replace("\\", "\\\\");
                 connection.Execute($"SELECT load_extension('{escapedPath}')");
 
+                lock (_tokenizerStateLock)
+                {
+                    _tokenizerLoadedConnections.Add(connectionKey);
+                }
+
                 return true;
             }
             catch (TargetInvocationException tie)
             {
+                if (!logErrors) return false;
+
                 Plugin.Instance.Logger.Warn("EnhanceChineseSearch - Load tokenizer failed (TargetInvocationException).");
 
                 var inner = tie.InnerException ?? tie;
@@ -644,6 +670,8 @@ namespace StrmAssistant.Mod
             }
             catch (Exception e)
             {
+                if (!logErrors) return false;
+
                 Plugin.Instance.Logger.Warn("EnhanceChineseSearch - Load tokenizer failed.");
 
                 if (Plugin.Instance.DebugMode)
@@ -683,24 +711,21 @@ namespace StrmAssistant.Mod
 
         private static void CreateConnectionPostfixCommon(object __instance, bool isReadOnly, IDatabaseConnection __result)
         {
-            if (_searchPatchCompleted || isReadOnly || _patchPhase2Initialized) return;
+            var dbPath = _dbFilePath?.GetValue(__instance) as string;
+            if (dbPath?.EndsWith("library.db", StringComparison.OrdinalIgnoreCase) != true)
+            {
+                return;
+            }
+
+            var tokenizerLoaded = LoadTokenizerExtension(__result, false);
+            if (!tokenizerLoaded || isReadOnly || _patchPhase2Initialized) return;
 
             lock (_lock)
             {
                 if (_patchPhase2Initialized) return;
 
-                var dbPath = _dbFilePath?.GetValue(__instance) as string;
-                if (dbPath?.EndsWith("library.db", StringComparison.OrdinalIgnoreCase) != true)
-                {
-                    return;
-                }
-
-                var tokenizerLoaded = LoadTokenizerExtension(__result);
-                if (tokenizerLoaded)
-                {
-                    _patchPhase2Initialized = true;
-                    PatchPhase2(__result);
-                }
+                _patchPhase2Initialized = true;
+                PatchPhase2(__result);
             }
         }
 
@@ -708,25 +733,7 @@ namespace StrmAssistant.Mod
         private static void CreateConnectionPostfixWin(object __instance, [HarmonyArgument("isReadOnly")] bool isReadOnly,
     ref IDatabaseConnection __result)
         {
-            if (_searchPatchCompleted || isReadOnly || _patchPhase2Initialized) return;
-
-            lock (_lock)
-            {
-                if (_patchPhase2Initialized) return;
-
-                var dbPath = _dbFilePath?.GetValue(__instance) as string;
-                if (dbPath?.EndsWith("library.db", StringComparison.OrdinalIgnoreCase) != true)
-                {
-                    return;
-                }
-
-                var tokenizerLoaded = LoadTokenizerExtension(__result);
-                if (tokenizerLoaded)
-                {
-                    _patchPhase2Initialized = true;
-                    PatchPhase2(__result);
-                }
-            }
+            CreateConnectionPostfixCommon(__instance, isReadOnly, __result);
         }
 
         [HarmonyPostfix]
@@ -744,19 +751,25 @@ namespace StrmAssistant.Mod
 
             if (!string.IsNullOrEmpty(query.SearchTerm) && hasMatchParam)
             {
-                var replacement = Plugin.Instance.MainOptionsStore.GetOptions().ModOptions.ExcludeOriginalTitleFromSearch
-                    ? "match '-OriginalTitle:' || simple_query(@SearchTerm)"
-                    : "match simple_query(@SearchTerm)";
+                if (Plugin.Instance.MainOptionsStore.GetOptions().ModOptions.EnhanceChineseSearch &&
+                    string.Equals(CurrentTokenizerName, SimpleTokenizerName, StringComparison.Ordinal))
+                {
+                    var replacement = Plugin.Instance.MainOptionsStore.GetOptions().ModOptions.ExcludeOriginalTitleFromSearch
+                        ? "match '-OriginalTitle:' || simple_query(@SearchTerm)"
+                        : "match simple_query(@SearchTerm)";
 
-                newSql = Regex.Replace(
-                    newSql,
-                    @"\bmatch\b\s*\(?\s*@SearchTerm\b",
-                    replacement,
-                    RegexOptions.IgnoreCase
-                );
+                    newSql = Regex.Replace(
+                        newSql,
+                        @"\bmatch\b\s*\(?\s*@SearchTerm\b",
+                        replacement,
+                        RegexOptions.IgnoreCase
+                    );
+                }
             }
 
-            if (!string.IsNullOrEmpty(query.Name) && hasMatchParam)
+            if (!string.IsNullOrEmpty(query.Name) && hasMatchParam &&
+                Plugin.Instance.MainOptionsStore.GetOptions().ModOptions.EnhanceChineseSearch &&
+                string.Equals(CurrentTokenizerName, SimpleTokenizerName, StringComparison.Ordinal))
             {
                 newSql = Regex.Replace(
                     newSql,
@@ -776,11 +789,10 @@ namespace StrmAssistant.Mod
                         {
                             currentValue = currentValue
                            [(currentValue.IndexOf(":", StringComparison.Ordinal) + 1)..]
-                            .Trim('\"', '^', '$')
-                            .Replace(".", string.Empty)
-                            .Replace("'", string.Empty);
+                            .Trim('\"', '^', '$');
                         }
 
+                        currentValue = NormalizeSearchTerm(currentValue);
                         bindParams[i] = new KeyValuePair<string, string>(kvp.Key, currentValue);
                     }
                 }
@@ -793,9 +805,14 @@ namespace StrmAssistant.Mod
         }
 
         [HarmonyPrefix]
-        private static bool CreateSearchTermPrefix(string searchTerm, ref string __result)
+        private static bool CreateSearchTermPrefix(object[] __args, ref string __result)
         {
-            __result = searchTerm.Replace(".", string.Empty).Replace("'", string.Empty);
+            if (__args == null || __args.Length == 0 || !(__args[0] is string searchTerm))
+            {
+                return true;
+            }
+
+            __result = NormalizeSearchTerm(searchTerm);
             return false;
         }
 
@@ -836,9 +853,9 @@ namespace StrmAssistant.Mod
                     }
                 }
 
-                if (AppVer >= Ver4937 && !string.IsNullOrEmpty(query.SearchTerm))
+                if (!string.IsNullOrEmpty(query.SearchTerm))
                 {
-                    _ = LoadTokenizerExtension(db);
+                    _ = LoadTokenizerExtension(db, false);
                 }
             }
 

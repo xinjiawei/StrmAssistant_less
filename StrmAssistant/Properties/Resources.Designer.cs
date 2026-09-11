@@ -813,7 +813,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Book 的本地化字符串。
+        ///   查找类似 书籍 的本地化字符串。
         /// </summary>
         public static string ItemType_Book_Book {
             get {
@@ -822,7 +822,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Collection 的本地化字符串。
+        ///   查找类似 合集 的本地化字符串。
         /// </summary>
         public static string ItemType_Collection_Collection {
             get {
@@ -831,7 +831,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Episode 的本地化字符串。
+        ///   查找类似 集 的本地化字符串。
         /// </summary>
         public static string ItemType_Episode_Episode {
             get {
@@ -840,7 +840,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Game 的本地化字符串。
+        ///   查找类似 游戏 的本地化字符串。
         /// </summary>
         public static string ItemType_Game_Game {
             get {
@@ -849,7 +849,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Genre 的本地化字符串。
+        ///   查找类似 流派 的本地化字符串。
         /// </summary>
         public static string ItemType_Genre_Genre {
             get {
@@ -858,7 +858,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 LiveTv 的本地化字符串。
+        ///   查找类似 电视直播 的本地化字符串。
         /// </summary>
         public static string ItemType_LiveTv_LiveTv {
             get {
@@ -867,7 +867,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Movie 的本地化字符串。
+        ///   查找类似 电影 的本地化字符串。
         /// </summary>
         public static string ItemType_Movie_Movie {
             get {
@@ -876,7 +876,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Music 的本地化字符串。
+        ///   查找类似 音乐 的本地化字符串。
         /// </summary>
         public static string ItemType_Music_Music {
             get {
@@ -885,7 +885,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Music Album 的本地化字符串。
+        ///   查找类似 专辑 的本地化字符串。
         /// </summary>
         public static string ItemType_MusicAlbum_MusicAlbum {
             get {
@@ -903,7 +903,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Person 的本地化字符串。
+        ///   查找类似 人物 的本地化字符串。
         /// </summary>
         public static string ItemType_Person_Person {
             get {
@@ -912,7 +912,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Photo 的本地化字符串。
+        ///   查找类似 照片 的本地化字符串。
         /// </summary>
         public static string ItemType_Photo_Photo {
             get {
@@ -921,7 +921,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Photo Album 的本地化字符串。
+        ///   查找类似 相册 的本地化字符串。
         /// </summary>
         public static string ItemType_PhotoAlbum_PhotoAlbum {
             get {
@@ -930,7 +930,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Playlist 的本地化字符串。
+        ///   查找类似 播放列表 的本地化字符串。
         /// </summary>
         public static string ItemType_Playlist_Playlist {
             get {
@@ -948,7 +948,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Series 的本地化字符串。
+        ///   查找类似 电视节目 的本地化字符串。
         /// </summary>
         public static string ItemType_Series_Series {
             get {
@@ -957,7 +957,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Studio 的本地化字符串。
+        ///   查找类似 工作室 的本地化字符串。
         /// </summary>
         public static string ItemType_Studio_Studio {
             get {
@@ -966,7 +966,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Tag 的本地化字符串。
+        ///   查找类似 标签 的本地化字符串。
         /// </summary>
         public static string ItemType_Tag_Tag {
             get {
@@ -975,7 +975,7 @@ namespace StrmAssistant.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Trailer 的本地化字符串。
+        ///   查找类似 预告片 的本地化字符串。
         /// </summary>
         public static string ItemType_Trailer_Trailer {
             get {

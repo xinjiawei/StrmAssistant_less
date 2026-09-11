@@ -274,55 +274,55 @@
     <value>Support Chinese fuzzy search and Pinyin search. Default is OFF.</value>
   </data>
   <data name="ItemType_Movie_Movie" xml:space="preserve">
-    <value>Movie</value>
+    <value>电影</value>
   </data>
   <data name="ItemType_Book_Book" xml:space="preserve">
-    <value>Book</value>
+    <value>书籍</value>
   </data>
   <data name="ItemType_Collection_Collection" xml:space="preserve">
-    <value>Collection</value>
+    <value>合集</value>
   </data>
   <data name="ItemType_Episode_Episode" xml:space="preserve">
-    <value>Episode</value>
+    <value>集</value>
   </data>
   <data name="ItemType_Game_Game" xml:space="preserve">
-    <value>Game</value>
+    <value>游戏</value>
   </data>
   <data name="ItemType_Genre_Genre" xml:space="preserve">
-    <value>Genre</value>
+    <value>流派</value>
   </data>
   <data name="ItemType_LiveTv_LiveTv" xml:space="preserve">
-    <value>LiveTv</value>
+    <value>电视直播</value>
   </data>
   <data name="ItemType_Music_Music" xml:space="preserve">
-    <value>Music</value>
+    <value>音乐</value>
   </data>
   <data name="ItemType_MusicAlbum_MusicAlbum" xml:space="preserve">
-    <value>Music Album</value>
+    <value>专辑</value>
   </data>
   <data name="ItemType_Person_Person" xml:space="preserve">
-    <value>Person</value>
+    <value>人物</value>
   </data>
   <data name="ItemType_Photo_Photo" xml:space="preserve">
-    <value>Photo</value>
+    <value>照片</value>
   </data>
   <data name="ItemType_PhotoAlbum_PhotoAlbum" xml:space="preserve">
-    <value>Photo Album</value>
+    <value>相册</value>
   </data>
   <data name="ItemType_Playlist_Playlist" xml:space="preserve">
-    <value>Playlist</value>
+    <value>播放列表</value>
   </data>
   <data name="ItemType_Series_Series" xml:space="preserve">
-    <value>Series</value>
+    <value>电视节目</value>
   </data>
   <data name="ItemType_Studio_Studio" xml:space="preserve">
-    <value>Studio</value>
+    <value>工作室</value>
   </data>
   <data name="ItemType_Tag_Tag" xml:space="preserve">
-    <value>Tag</value>
+    <value>标签</value>
   </data>
   <data name="ItemType_Trailer_Trailer" xml:space="preserve">
-    <value>Trailer</value>
+    <value>预告片</value>
   </data>
   <data name="ModOptions_SearchScope_Search_Scope" xml:space="preserve">
     <value>Search Scope</value>

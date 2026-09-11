@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net6.0</TargetFrameworks>
-	  <Version>4.9.3.0</Version>
+	  <Version>4.10.0.40</Version>
 	  <AssemblyVersion>$(Version)</AssemblyVersion>
 	  <FileVersion>$(Version)</FileVersion>
     <CopyLocalLockFileAssemblies>True</CopyLocalLockFileAssemblies>
@@ -22,18 +22,16 @@
   </PropertyGroup>
 
 	<ItemGroup>
-		<None Remove="Tokenizer\win_x64\libsimple.so" />
-		<None Remove="Tokenizer\linux_x64\libsimple.so" />
-		<None Remove="Tokenizer\linux_arm64\libsimple.so" />
-		<None Remove="Tokenizer\osx_universal\libsimple.so" />
+		<None Remove="Resources\Tokenizer\**\*.dll" />
+		<None Remove="Resources\Tokenizer\**\*.so" />
+		<None Remove="Resources\Tokenizer\**\*.dylib" />
 		<None Remove="Web\Resources\strmassistant.js" />
 	</ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource Include="Properties\thumb.png" />
-		<EmbeddedResource Include="Tokenizer\win_x64\libsimple.so" />
-		<EmbeddedResource Include="Tokenizer\linux_x64\libsimple.so" />
-		<EmbeddedResource Include="Tokenizer\linux_arm64\libsimple.so" />
-		<EmbeddedResource Include="Tokenizer\osx_universal\libsimple.so" />
+		<EmbeddedResource Include="Resources\Tokenizer\**\*.dll" />
+		<EmbeddedResource Include="Resources\Tokenizer\**\*.so" />
+		<EmbeddedResource Include="Resources\Tokenizer\**\*.dylib" />
 		<EmbeddedResource Include="Web\Resources\strmassistant.js" />
 	</ItemGroup>
 
